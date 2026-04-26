@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthFirst - Floating Minimalism Hospital</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- AOS CSS for Scroll Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#007BFF',
+                        'soft-teal': '#20c997',
+                        'light-bg': '#f3f8fc',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Anti-gravity & Floating Minimalism Styles */
+        body {
+            background: radial-gradient(circle at top left, #f8fafc, #e0f2fe);
+            background-attachment: fixed;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Classes */
+        .glass {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* CSS Keyframe Floating Animations */
+        @keyframes float {
+            0% {
+                transform: translateY(0px) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-15px) rotate(1deg);
+            }
+
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+        }
+
+        @keyframes float-slow {
+            0% {
+                transform: translateY(0px) scale(1);
+            }
+
+            50% {
+                transform: translateY(-8px) scale(1.02);
+            }
+
+            100% {
+                transform: translateY(0px) scale(1);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(0, 123, 255, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+            }
+        }
+
+        /* Apply Animations */
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-float-slow {
+            animation: float-slow 8s ease-in-out infinite;
+        }
+
+        .animate-float-delayed {
+            animation: float 7s ease-in-out infinite;
+            animation-delay: 2s;
+        }
+
+        .btn-glow {
+            animation: pulse-glow 2s infinite;
+            background: linear-gradient(135deg, #007BFF, #0056b3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.5);
+            animation: none;
+        }
+
+        /* 3D Tilt Effect on hover for cards */
+        .tilt-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .tilt-card:hover {
+            transform: translateY(-10px) rotateX(4deg) rotateY(-4deg);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Image overlay gradient */
+        .image-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+            border-radius: inherit;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Booking Modal Styles */
+        .modal-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.4);
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Step Transitions */
+        .step-container {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .step-hidden {
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+        }
+
+        .step-active {
+            opacity: 1;
+            transform: translateX(0);
+            position: relative;
+            visibility: visible;
+        }
+
+        /* Booking Grid Logic Styling */
+        .slot {
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 3rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .slot-available {
+            background: white;
+            border: 2px solid #20c997;
+            color: #1e293b;
+            cursor: pointer;
+        }
+
+        .slot-available:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px rgba(32, 201, 151, 0.2);
+        }
+
+        .slot-occupied {
+            background: #e2e8f0;
+            border: 2px solid #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .slot-selected {
+            background: #007BFF;
+            border: 2px solid #007BFF;
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        /* Blob Background Shapes */
+        .blob {
+            position: absolute;
+            filter: blur(60px);
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* Progress Bar */
+        .progress-step {
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            color: #007BFF;
+            font-weight: bold;
+        }
+
+        .progress-step.completed {
+            color: #20c997;
+        }
+
+        .progress-line {
+            transition: width 0.3s ease;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1001;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="glass-dark rounded-xl shadow-2xl flex items-center justify-center gap-2">
+        <i class="fas fa-check-circle text-green-400"></i> Copied!
+    </div>
+
+    <!-- Incoming Alert Overlay -->
+    <div id="queue-alert"
+        class="fixed inset-0 z-[2000] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-500 scale-90">
+        <div class="absolute inset-0 bg-blue-600/20 backdrop-blur-md"></div>
+        <div
+            class="relative glass rounded-[3rem] p-12 text-center shadow-2xl border-4 border-white/50 animate-float max-w-lg w-full mx-4">
+            <div
+                class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-med-blue text-5xl mx-auto mb-6 shadow-lg">
+                <i class="fas fa-bullhorn animate-bounce"></i>
+            </div>
+            <h2 class="text-3xl font-black text-gray-800 mb-2 uppercase tracking-tighter">New Patient Called</h2>
+            <div class="text-[120px] font-black text-med-blue leading-none mb-4" id="alert-number">--</div>
+            <p class="text-xl font-bold text-gray-600">PLEASE ENTER THE CLINIC</p>
+            <div class="mt-8 flex justify-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping"></div>
+                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping" style="animation-delay: 0.2s"></div>
+                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping" style="animation-delay: 0.4s"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Blobs -->
+    <div class="blob bg-blue-300 w-96 h-96 rounded-full top-0 left-0 animate-float-slow"></div>
+    <div class="blob bg-teal-200 w-96 h-96 rounded-full top-40 right-10 animate-float-delayed"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="fixed top-0 w-full z-50 p-4 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto glass rounded-2xl px-6 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                <div
+                    class="w-10 h-10 bg-gradient-to-tr from-med-blue to-soft-teal rounded-xl flex items-center justify-center text-white font-bold text-xl animate-float-slow">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <span
+                    class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-med-blue to-soft-teal">HealthFirst</span>
+            </div>
+
+            <div class="hidden md:flex gap-8 font-medium text-gray-600">
+                <a href="#home" class="hover:text-med-blue transition-colors relative group">
+                    Home
+                    <span
+                        class="absolute -bottom-1 left-0 w-0 h-0.5 bg-med-blue transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#services" class="hover:text-med-blue transition-colors relative group">
+                    Services
+                </a>
+                <a href="#doctors" class="hover:text-med-blue transition-colors relative group">
+                    Doctors
+                </a>
+                <a href="#gallery" class="hover:text-med-blue transition-colors relative group">
+                    Gallery
+                </a>
+                <a href="#contact" class="hover:text-med-blue transition-colors relative group">
+                    Contact
+                </a>
+            </div>
+
+            <button onclick="openBooking()"
+                class="hidden md:block px-6 py-2.5 rounded-xl font-semibold btn-glow text-sm">
+                Balan Qabso
+            </button>
+
+            <!-- Mobile Menu Icon-->
+            <button class="md:hidden text-gray-700">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="relative min-h-screen pt-28 pb-16 flex items-center overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 w-full grid md:grid-cols-2 gap-12 items-center relative z-10">
+            <!-- Left Text Content -->
+            <div data-aos="fade-right" data-aos-duration="1000">
+                <span
+                    class="inline-block py-1 px-3 rounded-full bg-blue-100 text-med-blue font-semibold text-sm mb-4 animate-float">
+                    🌟 24/7 Premium Care
+                </span>
+                <h1 class="text-5xl md:text-7xl font-bold leading-tight mb-6">
+                    Your <span
+                        class="bg-clip-text text-transparent bg-gradient-to-r from-med-blue to-soft-teal">Health,</span><br>
+                    Our Priority
+                </h1>
+                <p class="text-lg text-gray-600 mb-8 max-w-md">
+                    Experience state-of-the-art medical care with zero gravity, seamless booking, and top-tier
+                    professionals dedicated to your wellbeing.
+                </p>
+                <div class="flex gap-4">
+                    <button onclick="openBooking()"
+                        class="px-8 py-3.5 rounded-xl font-semibold btn-glow text-lg shadow-lg">
+                        Balan Qabso <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Image Content -->
+            <div class="relative h-[600px] flex justify-center items-center" data-aos="fade-left"
+                data-aos-duration="1200">
+                <!-- Main Image wrapper with Glass styling -->
+                <div class="relative w-full max-w-md h-[500px] rounded-[2.5rem] glass p-2 animate-float-slow">
+                    <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=800"
+                        alt="Professional Doctor" class="w-full h-full object-cover rounded-[2rem]">
+
+                    <!-- Floating Stat Card 1 -->
+                    <div class="absolute -left-12 top-20 glass rounded-2xl p-4 flex items-center gap-4 animate-float"
+                        style="animation-delay: 1s;">
+                        <div
+                            class="w-12 h-12 rounded-full bg-soft-teal/20 flex items-center justify-center text-soft-teal text-xl">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div>
+                            <p class="text-xl font-bold text-gray-800">50+</p>
+                            <p class="text-xs text-gray-500 font-medium whitespace-nowrap">Expert Doctors</p>
+                        </div>
+                    </div>
+
+                    <!-- Floating Stat Card 2 -->
+                    <div class="absolute -right-8 bottom-20 glass rounded-2xl p-4 flex items-center gap-4 animate-float"
+                        style="animation-delay: 2.5s;">
+                        <div
+                            class="w-12 h-12 rounded-full bg-med-blue/20 flex items-center justify-center text-med-blue text-xl flex-shrink-0 relative">
+                            <div class="absolute inset-0 rounded-full animate-ping bg-med-blue/40 opacity-75"></div>
+                            <i class="fas fa-circle text-xs text-green-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xl font-bold text-gray-800">Live Status</p>
+                            <p class="text-xs text-green-500 font-bold whitespace-nowrap">Open Now</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Overview -->
+    <section id="services" class="py-20 relative">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl font-bold mb-4">Our <span class="text-med-blue">Departments</span></h2>
+            </div>
+            <div class="grid md:grid-cols-4 gap-6">
+                <div class="glass rounded-3xl p-6 text-center tilt-card">
+                    <div
+                        class="w-16 h-16 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-2xl text-blue-600 mb-4">
+                        <i class="fas fa-stethoscope"></i></div>
+                    <h3 class="font-bold">General</h3>
+                </div>
+                <div class="glass rounded-3xl p-6 text-center tilt-card">
+                    <div
+                        class="w-16 h-16 mx-auto rounded-full bg-teal-100 flex items-center justify-center text-2xl text-teal-600 mb-4">
+                        <i class="fas fa-tooth"></i></div>
+                    <h3 class="font-bold">Dental</h3>
+                </div>
+                <div class="glass rounded-3xl p-6 text-center tilt-card">
+                    <div
+                        class="w-16 h-16 mx-auto rounded-full bg-purple-100 flex items-center justify-center text-2xl text-purple-600 mb-4">
+                        <i class="fas fa-baby"></i></div>
+                    <h3 class="font-bold">Pediatrics</h3>
+                </div>
+                <div class="glass rounded-3xl p-6 text-center tilt-card">
+                    <div
+                        class="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center text-2xl text-red-600 mb-4">
+                        <i class="fas fa-user-nurse"></i></div>
+                    <h3 class="font-bold">Surgery</h3>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Patient Status Portal (Check My Status) -->
+    <section class="py-20 relative overflow-hidden bg-white/50 backdrop-blur-md" id="contact">
+        <div class="max-w-5xl mx-auto px-6" data-aos="zoom-in">
+            <div class="glass rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-sm">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold mb-4">Patient <span class="text-med-blue">Status Portal</span></h2>
+                    <p class="text-gray-500">Track your live position in the queue.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-10 items-center">
+                    <div class="glass rounded-3xl p-8 bg-white/40 h-full">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
+                                <input type="text" id="statusPhone" placeholder="061XXXXXXX"
+                                    class="w-full bg-white/80 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-med-blue">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Queue Number</label>
+                                <input type="number" id="statusQueue" placeholder="e.g. 14"
+                                    class="w-full bg-white/80 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-med-blue">
+                            </div>
+                            <button onclick="checkStatus()"
+                                class="w-full bg-med-blue text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-all shadow-md">
+                                Check Status
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="statusResult"
+                        class="hidden glass rounded-3xl p-8 bg-gradient-to-br from-white/90 to-blue-50 border border-blue-200 text-center flex flex-col justify-center h-full relative">
+                        <div
+                            class="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg shadow-green-500/50 flex items-center gap-1">
+                            <i class="fas fa-circle text-[8px] animate-pulse"></i> LIVE
+                        </div>
+                        <h3 class="text-xl font-bold mb-4">Your Status</h3>
+                        <div class="flex justify-around items-center mb-6">
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase">Current</p>
+                                <p class="text-3xl font-bold text-med-blue" id="live-current-display">--</p>
+                            </div>
+                            <div class="text-gray-300">
+                                <i class="fas fa-arrow-right"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase">Yours</p>
+                                <p class="text-3xl font-bold text-soft-teal" id="yourQueueNo">--</p>
+                            </div>
+                        </div>
+                        <div class="bg-white/60 p-4 rounded-xl border border-white">
+                            <p class="text-sm text-gray-500">Est. Wait Time</p>
+                            <p class="text-xl font-bold text-gray-800" id="statusWaitTime">-- mins</p>
+                        </div>
+                    </div>
+
+                    <div id="statusPlaceholder"
+                        class="glass rounded-3xl p-8 flex flex-col items-center justify-center text-center h-full min-h-[250px] bg-white/20">
+                        <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 font-medium">Enter details to see live tracking.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking Modal (5-Step Wizard) -->
+    <div id="booking-modal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4">
+        <div
+            class="modal-content w-full max-w-4xl glass rounded-[2rem] p-6 md:p-8 relative overflow-hidden flex flex-col max-h-[90vh]">
+            <button onclick="closeBooking()"
+                class="absolute top-4 right-6 text-gray-400 hover:text-red-500 transition-colors text-2xl z-50">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <h3 class="text-2xl font-bold mb-6 text-center">Balan Qabso Wizard</h3>
+
+            <!-- Progress Bar -->
+            <div class="mb-8 px-4">
+                <div class="flex justify-between items-center relative">
+                    <!-- Progress line background -->
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded z-0"></div>
+                    <!-- Progress line active -->
+                    <div id="progress-line"
+                        class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-med-blue rounded z-0 progress-line"
+                        style="width: 0%;"></div>
+
+                    <!-- Steps -->
+                    <div class="relative z-10 flex flex-col items-center gap-1 progress-step active" id="pb-step-1">
+                        <div
+                            class="w-8 h-8 rounded-full bg-white border-2 border-med-blue text-med-blue flex items-center justify-center font-bold font-sm shadow-sm transition-all pb-icon">
+                            1</div>
+                        <span class="text-xs font-semibold">Dept</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center gap-1 progress-step text-gray-400"
+                        id="pb-step-2">
+                        <div
+                            class="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-sm font-bold transition-all pb-icon">
+                            2</div>
+                        <span class="text-xs">Doctor</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center gap-1 progress-step text-gray-400"
+                        id="pb-step-3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-sm font-bold transition-all pb-icon">
+                            3</div>
+                        <span class="text-xs">Info</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center gap-1 progress-step text-gray-400"
+                        id="pb-step-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-sm font-bold transition-all pb-icon">
+                            4</div>
+                        <span class="text-xs">Schedule</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center gap-1 progress-step text-gray-400"
+                        id="pb-step-5">
+                        <div
+                            class="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-sm font-bold transition-all pb-icon">
+                            5</div>
+                        <span class="text-xs">Payment</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Steps Container -->
+            <div class="relative flex-1 overflow-y-auto overflow-x-hidden min-h-[350px] p-2" id="steps-container">
+
+                <!-- STEP 1: Departments -->
+                <div id="step-1" class="step-container step-active w-full">
+                    <h4 class="text-xl font-bold mb-4">Select Department</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div onclick="selectDept('General')"
+                            class="glass hover:bg-white/80 cursor-pointer rounded-2xl p-4 text-center transition-all hover:-translate-y-1 shadow-sm">
+                            <div
+                                class="w-12 h-12 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-2">
+                                <i class="fas fa-stethoscope text-xl"></i></div>
+                            <span class="font-semibold text-sm">General</span>
+                        </div>
+                        <div onclick="selectDept('Dental')"
+                            class="glass hover:bg-white/80 cursor-pointer rounded-2xl p-4 text-center transition-all hover:-translate-y-1 shadow-sm">
+                            <div
+                                class="w-12 h-12 mx-auto rounded-full bg-teal-100 text-teal-600 flex items-center justify-center mb-2">
+                                <i class="fas fa-tooth text-xl"></i></div>
+                            <span class="font-semibold text-sm">Dental</span>
+                        </div>
+                        <div onclick="selectDept('Pediatrics')"
+                            class="glass hover:bg-white/80 cursor-pointer rounded-2xl p-4 text-center transition-all hover:-translate-y-1 shadow-sm">
+                            <div
+                                class="w-12 h-12 mx-auto rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-2">
+                                <i class="fas fa-baby text-xl"></i></div>
+                            <span class="font-semibold text-sm">Pediatrics</span>
+                        </div>
+                        <div onclick="selectDept('Surgery')"
+                            class="glass hover:bg-white/80 cursor-pointer rounded-2xl p-4 text-center transition-all hover:-translate-y-1 shadow-sm">
+                            <div
+                                class="w-12 h-12 mx-auto rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-2">
+                                <i class="fas fa-user-nurse text-xl"></i></div>
+                            <span class="font-semibold text-sm">Surgery</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Doctors -->
+                <div id="step-2" class="step-container step-hidden w-full">
+                    <button onclick="goToStep(1)" class="text-sm text-gray-500 hover:text-med-blue mb-4 block"><i
+                            class="fas fa-arrow-left mr-1"></i> Back</button>
+                    <h4 class="text-xl font-bold mb-4">Select Doctor <span
+                            class="text-sm font-normal text-gray-500 ml-2" id="selected-dept-label"></span></h4>
+
+                    <div class="grid sm:grid-cols-2 gap-4" id="doctors-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- STEP 3: Details & Location -->
+                <div id="step-3" class="step-container step-hidden w-full max-w-xl mx-auto">
+                    <button onclick="goToStep(2)" class="text-sm text-gray-500 hover:text-med-blue mb-4 block"><i
+                            class="fas fa-arrow-left mr-1"></i> Back</button>
+                    <h4 class="text-xl font-bold mb-4">Your Details</h4>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700">Full Name</label>
+                            <input type="text" id="patientName" placeholder="Maxamed Cali"
+                                class="w-full p-3 rounded-xl border border-gray-200 bg-white/70 focus:ring-2 focus:ring-med-blue outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700">Payment Phone</label>
+                            <input type="text" id="patientPhone" placeholder="061XXXXXXX"
+                                class="w-full p-3 rounded-xl border border-gray-200 bg-white/70 focus:ring-2 focus:ring-med-blue outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1 text-gray-700">Select City</label>
+                                <select id="citySelect" onchange="updateDistricts()"
+                                    class="w-full p-3 rounded-xl border border-gray-200 bg-white/70 focus:ring-2 focus:ring-med-blue outline-none cursor-pointer">
+                                    <option value="" disabled selected>Choose City...</option>
+                                    <option value="Mogadishu">Mogadishu</option>
+                                    <option value="Hargeisa">Hargeisa</option>
+                                    <option value="Garowe">Garowe</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1 text-gray-700">Select District</label>
+                                <select id="districtSelect" disabled
+                                    class="w-full p-3 rounded-xl border border-gray-200 bg-white/50 text-gray-500 outline-none cursor-pointer transition-all">
+                                    <option value="" disabled selected>Waiting on City...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="submitInfo()" class="w-full py-3 rounded-xl btn-glow font-bold mt-2">Next:
+                            Schedule</button>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Schedule & Grid -->
+                <div id="step-4" class="step-container step-hidden w-full">
+                    <button onclick="goToStep(3)" class="text-sm text-gray-500 hover:text-med-blue mb-4 block"><i
+                            class="fas fa-arrow-left mr-1"></i> Back</button>
+
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Left: Grid -->
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-4">
+                                <h4 class="text-xl font-bold">Select Number</h4>
+                                <input type="date"
+                                    class="p-2 text-sm rounded-lg border border-gray-200 bg-white/70 outline-none">
+                            </div>
+
+                            <div class="flex gap-4 mb-4 text-xs font-medium">
+                                <div class="flex items-center gap-1">
+                                    <div class="w-3 h-3 rounded-full bg-white border border-soft-teal"></div> Available
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <div class="w-3 h-3 rounded-full bg-slate-200 border border-slate-300"></div>
+                                    Occupied
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <div class="w-3 h-3 rounded-full bg-med-blue border border-med-blue"></div> Selected
+                                </div>
+                            </div>
+
+                            <div id="numberGrid" class="grid grid-cols-5 sm:grid-cols-6 gap-2">
+                                <!-- JS Populated -->
+                            </div>
+                        </div>
+
+                        <!-- Right: Smart Wait -->
+                        <div class="w-full md:w-64">
+                            <div
+                                class="glass rounded-2xl p-6 bg-gradient-to-br from-blue-50 to-teal-50 border border-blue-100 shadow-sm text-center">
+                                <h5 class="font-bold text-gray-800 mb-2 text-sm">Smart Waiting Time</h5>
+                                <div class="bg-white/80 rounded-xl py-4 border border-white shadow-inner mb-4">
+                                    <span id="wizardWaitTime" class="text-2xl font-bold text-med-blue">-- mins</span>
+                                    <p class="text-[10px] text-gray-500 uppercase font-bold mt-1">Estimated Wait</p>
+                                </div>
+                                <button onclick="confirmSchedule()"
+                                    class="w-full py-2.5 rounded-lg bg-med-blue text-white font-bold text-sm hover:bg-blue-600 transition-colors shadow-md">
+                                    Proceed to Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: Payment & Copy -->
+                <div id="step-5" class="step-container step-hidden w-full max-w-sm mx-auto">
+                    <div class="text-center mb-6">
+                        <div
+                            class="w-16 h-16 rounded-full bg-green-100 text-green-500 flex items-center justify-center text-3xl mx-auto mb-2 animate-float-slow">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="text-2xl font-bold">Almost Done!</h4>
+                        <p class="text-gray-500 text-sm">Complete payment to confirm.</p>
+                    </div>
+
+                    <div
+                        class="glass rounded-2xl p-6 bg-white/60 border border-gray-200 shadow-lg relative overflow-hidden">
+                        <!-- styling flare -->
+                        <div class="absolute -right-10 -top-10 w-24 h-24 bg-med-blue/10 rounded-full blur-xl"></div>
+
+                        <div class="text-center mb-4">
+                            <span class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Receipt</span>
+                        </div>
+
+                        <div class="space-y-3 mb-6 text-sm">
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Patient:</span>
+                                <span class="font-semibold" id="receiptName"></span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Doctor:</span>
+                                <span class="font-semibold" id="receiptDoc"></span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Queue No:</span>
+                                <span class="font-bold text-med-blue" id="receiptNum"></span>
+                            </div>
+                            <div class="flex justify-between py-2 bg-blue-50/50 rounded px-2">
+                                <span class="font-bold text-gray-700">Total Fee:</span>
+                                <span class="font-bold text-green-600">$5.00</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+                            <p class="text-sm text-gray-800 mb-2 font-medium">Fadlan lacagta dhan [$5] ugu soo tuur:</p>
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="text-xl font-bold tracking-wider" id="paymentPhone">0615555555</span>
+                                <button onclick="copyPhone()"
+                                    class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-med-blue transition-colors shadow-sm"
+                                    title="Copy Number">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="finishBooking()" class="w-full mt-6 py-3 rounded-xl btn-glow font-bold">I Have
+                        Paid</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // --- SUPABASE CORE CONFIG ---
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+
+        // Initialize client on window to ensure global availability
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Init AOS
+        AOS.init({ once: true, offset: 50 });
+
+        // Sticky Nav logic
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 20) {
+                nav.classList.add('py-2', 'bg-white/10', 'backdrop-blur-lg', 'shadow-sm');
+                nav.classList.remove('py-4');
+            } else {
+                nav.classList.add('py-4');
+                nav.classList.remove('py-2', 'bg-white/10', 'backdrop-blur-lg', 'shadow-sm');
+            }
+        });
+
+        // --- 5-Step Wizard Logic ---
+        let bookingData = {
+            dept: null,
+            doctor: null,
+            name: '',
+            phone: '',
+            city: '',
+            district: '',
+            queueNum: null
+        };
+
+        const districtsData = {
+            "Mogadishu": ["Hodan", "Hawlwadaag", "Abdiaziz", "Waberi", "Heliwaa"],
+            "Hargeisa": ["Koodbuur", "26 June", "Gacan Libaax", "Ahmed Dhagax"],
+            "Garowe": ["Waberi", "Hodhan", "Hantiwadag", "1da May"]
+        };
+
+        const mockDoctors = {
+            "General": [
+                { name: "Dr. Ahmed Ali", spec: "General Medicine", live: true },
+                { name: "Dr. Sarah Jama", spec: "Internal Medicine", live: false }
+            ],
+            "Dental": [
+                { name: "Dr. Hassan", spec: "Orthodontist", live: true }
+            ],
+            "Pediatrics": [
+                { name: "Dr. Fatima Omar", spec: "Child Specialist", live: true }
+            ],
+            "Surgery": [
+                { name: "Dr. Khalid Osman", spec: "General Surgeon", live: true },
+                { name: "Dr. Aisha", spec: "Neurosurgeon", live: false }
+            ]
+        };
+
+        function openBooking() {
+            window.location.href = 'appointment.html';
+        }
+
+        function closeBooking() {
+            document.getElementById('booking-modal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function updateProgressUI(stepIndex) {
+            // Update line width 1->0%, 2->25%, 3->50%, 4->75%, 5->100%
+            const line = document.getElementById('progress-line');
+            const pct = ((stepIndex - 1) / 4) * 100;
+            line.style.width = pct + '%';
+
+            // Update steps points
+            for (let i = 1; i <= 5; i++) {
+                const stepEl = document.getElementById('pb-step-' + i);
+                const iconEl = stepEl.querySelector('.pb-icon');
+
+                stepEl.classList.remove('active', 'completed', 'text-gray-400');
+                iconEl.classList.remove('border-med-blue', 'text-med-blue', 'border-gray-300', 'bg-med-blue', 'text-white', 'border-green-500', 'bg-green-500');
+
+                if (i < stepIndex) {
+                    // Completed
+                    stepEl.classList.add('completed');
+                    iconEl.classList.add('border-green-500', 'bg-green-500', 'text-white');
+                    iconEl.innerHTML = '<i class="fas fa-check text-xs"></i>';
+                } else if (i === stepIndex) {
+                    // Active
+                    stepEl.classList.add('active');
+                    iconEl.classList.add('border-med-blue', 'text-med-blue');
+                    iconEl.innerHTML = i;
+                } else {
+                    // Pending
+                    stepEl.classList.add('text-gray-400');
+                    iconEl.classList.add('border-gray-300');
+                    iconEl.innerHTML = i;
+                }
+            }
+        }
+
+        function goToStep(stepNumber) {
+            // Hide all
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById('step-' + i);
+                if (step) {
+                    step.classList.remove('step-active');
+                    step.classList.add('step-hidden');
+                }
+            }
+            // Show target
+            const target = document.getElementById('step-' + stepNumber);
+            if (target) {
+                target.classList.remove('step-hidden');
+
+                // Slight delay to allow display block calculation before transition
+                setTimeout(() => {
+                    target.classList.add('step-active');
+                }, 10);
+            }
+
+            updateProgressUI(stepNumber);
+        }
+
+        function selectDept(deptName) {
+            bookingData.dept = deptName;
+            document.getElementById('selected-dept-label').innerText = `(${deptName})`;
+
+            // Populate Doctors
+            const docs = mockDoctors[deptName] || [];
+            const container = document.getElementById('doctors-list');
+            container.innerHTML = '';
+
+            docs.forEach(doc => {
+                const liveBadge = doc.live
+                    ? `<span class="bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm"><i class="fas fa-circle text-[8px] animate-pulse"></i> LIVE</span>`
+                    : `<span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-bold">OFFLINE</span>`;
+
+                container.innerHTML += `
+                    <div class="glass rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-md border border-white/50">
+                        <div class="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex-shrink-0">
+                             <img src="https://ui-avatars.com/api/?name=${doc.name.replace('Dr. ', '')}&background=EBF8FF&color=007BFF" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h5 class="font-bold text-gray-800">${doc.name}</h5>
+                            <p class="text-xs text-gray-500 mb-1">${doc.spec}</p>
+                            ${liveBadge}
+                        </div>
+                        <button onclick="selectDoctor('${doc.name}', ${doc.live})" class="px-4 py-2 ${doc.live ? 'bg-med-blue hover:bg-blue-600' : 'bg-gray-300 pointer-events-none'} text-white rounded-lg text-sm font-semibold transition-colors">
+                            Select
+                        </button>
+                    </div>
+                `;
+            });
+
+            goToStep(2);
+        }
+
+        function selectDoctor(docName, isLive) {
+            if (!isLive) return;
+            bookingData.doctor = docName;
+            goToStep(3);
+        }
+
+        function updateDistricts() {
+            const city = document.getElementById('citySelect').value;
+            const distSelect = document.getElementById('districtSelect');
+
+            distSelect.innerHTML = '<option value="" disabled selected>Select District...</option>';
+
+            if (districtsData[city]) {
+                distSelect.disabled = false;
+                distSelect.classList.remove('bg-white/50', 'text-gray-500');
+                distSelect.classList.add('bg-white/70', 'text-gray-800');
+
+                districtsData[city].forEach(d => {
+                    distSelect.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+            }
+        }
+
+        function submitInfo() {
+            const name = document.getElementById('patientName').value.trim();
+            const phone = document.getElementById('patientPhone').value.trim();
+            const city = document.getElementById('citySelect').value;
+            const district = document.getElementById('districtSelect').value;
+
+            if (!name || !phone || !city || !district) {
+                alert("Please fill all fields to continue.");
+                return;
+            }
+
+            bookingData.name = name;
+            bookingData.phone = phone;
+            bookingData.city = city;
+            bookingData.district = district;
+
+            // Generate Number Grid Step 4
+            initGrid();
+            goToStep(4);
+        }
+
+        // Grid Variables
+        const totalSlots = 30;
+        // random occupied slots logic
+        const occupiedSlots = new Set([2, 5, 7, 8, 12, 18, 19, 22, 28]);
+
+        function initGrid() {
+            const grid = document.getElementById('numberGrid');
+            grid.innerHTML = '';
+            bookingData.queueNum = null;
+            document.getElementById('wizardWaitTime').innerText = "-- mins";
+
+            for (let i = 1; i <= totalSlots; i++) {
+                const el = document.createElement('div');
+                el.innerText = i;
+
+                if (occupiedSlots.has(i)) {
+                    el.className = 'slot slot-occupied';
+                } else {
+                    el.className = 'slot slot-available';
+                    el.onclick = () => selectSlot(i, el);
+                }
+                grid.appendChild(el);
+            }
+        }
+
+        function selectSlot(num, element) {
+            const currentlySelected = document.querySelector('.slot-selected');
+            if (currentlySelected) {
+                currentlySelected.classList.remove('slot-selected');
+                currentlySelected.classList.add('slot-available');
+            }
+
+            element.classList.remove('slot-available');
+            element.classList.add('slot-selected');
+            bookingData.queueNum = num;
+
+            // Calc wait time
+            let priorOccupied = 0;
+            for (let i = 1; i < num; i++) {
+                if (occupiedSlots.has(i)) priorOccupied++;
+            }
+            let priorTotal = (num - 1);
+            let estimatedMins = priorTotal * 10 + 5;
+
+            const waitDisp = document.getElementById('wizardWaitTime');
+            waitDisp.innerText = `${estimatedMins} mins`;
+
+            // subtle pop animation
+            waitDisp.classList.remove('animate-pulse');
+            void waitDisp.offsetWidth;
+            waitDisp.classList.add('animate-pulse');
+        }
+
+        function confirmSchedule() {
+            if (!bookingData.queueNum) {
+                alert("Please select a number from the grid.");
+                return;
+            }
+
+            // Populate Step 5 Receipt
+            document.getElementById('receiptName').innerText = bookingData.name;
+            document.getElementById('receiptDoc').innerText = bookingData.doctor;
+            document.getElementById('receiptNum').innerText = '#' + bookingData.queueNum;
+
+            goToStep(5);
+        }
+
+        function copyPhone() {
+            const phone = "0615555555";
+            navigator.clipboard.writeText(phone).then(() => {
+                showToast();
+            });
+        }
+
+        function showToast() {
+            var x = document.getElementById("toast");
+            x.className = x.className.replace("hidden", "");
+            x.classList.add("show");
+            setTimeout(function () { x.classList.remove("show"); }, 3000);
+        }
+
+        function finishBooking() {
+            alert(`Success, ${bookingData.name}! Your booking with ${bookingData.doctor} for Queue #${bookingData.queueNum} is confirmed.`);
+            closeBooking();
+        }
+
+        // Patient Status Portal Logic - NOW WITH DATABASE VALIDATION
+        async function checkStatus() {
+            const phone = document.getElementById('statusPhone').value.trim();
+            const qStr = document.getElementById('statusQueue').value.trim();
+
+            if (!phone || !qStr) {
+                alert("Fadlan buuxi xogta (Please enter phone & queue number).");
+                return;
+            }
+
+            const qNum = parseInt(qStr);
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            // Show loading state or clear previous
+            document.getElementById('statusPlaceholder').innerHTML = '<i class="fas fa-spinner animate-spin text-4xl text-med-blue mb-4"></i><p class="text-gray-500">Verifying your booking...</p>';
+            document.getElementById('statusPlaceholder').classList.remove('hidden');
+            document.getElementById('statusResult').classList.add('hidden');
+
+            try {
+                // Query database for matching booking
+                const { data: booking, error } = await window.supabaseClient
+                    .from('appointments')
+                    .select('*')
+                    .eq('phone', phone)
+                    .eq('slot_number', qNum)
+                    .eq('appointment_date', todayDate)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (!booking) {
+                    document.getElementById('statusPlaceholder').innerHTML = '<i class="fas fa-times-circle text-4xl text-red-400 mb-4"></i><p class="text-gray-800 font-bold">Booking Not Found</p><p class="text-sm text-gray-500">Check your phone and number.</p>';
+                    return;
+                }
+
+                if (booking.status !== 'verified') {
+                    document.getElementById('statusPlaceholder').innerHTML = '<i class="fas fa-clock text-4xl text-orange-400 mb-4"></i><p class="text-gray-800 font-bold">Payment Pending</p><p class="text-sm text-gray-500">Your appointment is not yet verified.</p>';
+                    return;
+                }
+
+                // If verified, show the results
+                document.getElementById('statusPlaceholder').classList.add('hidden');
+                const res = document.getElementById('statusResult');
+                res.classList.remove('hidden');
+
+                document.getElementById('yourQueueNo').innerText = qNum;
+                userTrackedNumber = qNum; // Update tracking global
+                
+                updateLiveUI(); // Use real-time number to update the wait time display
+
+                // bounce animation
+                res.classList.add('animate-float-slow');
+            } catch (err) {
+                console.error("Verification error:", err);
+                alert("Error checking status. Please try again.");
+            }
+        }
+
+        // --- REAL-TIME QUEUE TRACKER ---
+        let liveCurrentNumber = 0;
+        let userTrackedNumber = null;
+
+        async function initQueueTracker() {
+            try {
+                // Initial Fetch
+                const { data, error } = await window.supabaseClient.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
+                if (data) {
+                    liveCurrentNumber = data.current_number;
+                    updateLiveUI();
+                } else if (error) {
+                    console.warn("Queue data fetch error:", error.message);
+                }
+
+                // Real-time listener
+                window.supabaseClient
+                    .channel('queue-sync')
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clinic_status' }, payload => {
+                        if (payload.new.doctor_id === 'global') {
+                            handleQueueUpdate(payload.new.current_number);
+                        }
+                    })
+                    .subscribe();
+
+                // Fallback Polling (Every 10 seconds in case Real-time is blocked/disabled)
+                setInterval(async () => {
+                    const { data } = await window.supabaseClient.from('clinic_status').select('current_number').eq('doctor_id', 'global').maybeSingle();
+                    if (data && data.current_number !== liveCurrentNumber) {
+                        handleQueueUpdate(data.current_number);
+                    }
+                }, 10000);
+            } catch (err) {
+                console.error("Queue Sync failed to initialize:", err);
+            }
+        }
+
+        function handleQueueUpdate(newNum) {
+            const oldNum = liveCurrentNumber;
+            liveCurrentNumber = newNum;
+            
+            // Only show alert if the number actually increased (new patient called)
+            if (liveCurrentNumber > oldNum && liveCurrentNumber > 0) {
+                showAlert(liveCurrentNumber);
+                // Also play a subtle alert sound for the patient if possible
+                const ding = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                ding.play().catch(() => {});
+            }
+            updateLiveUI();
+        }
+
+        function updateLiveUI() {
+            // Update display in portal if active
+            const liveEl = document.getElementById('live-current-display');
+            if (liveEl) liveEl.innerText = liveCurrentNumber;
+
+            // Update wait time if user is tracking
+            if (userTrackedNumber) {
+                const waitDisp = document.getElementById('statusWaitTime');
+                const diff = userTrackedNumber - liveCurrentNumber;
+
+                if (diff < 0) {
+                    waitDisp.innerText = "Passed";
+                    waitDisp.className = "text-xl font-bold text-red-500";
+                } else if (diff === 0) {
+                    waitDisp.innerText = "It's your turn!";
+                    waitDisp.className = "text-xl font-bold text-green-500";
+                } else {
+                    waitDisp.innerText = `${diff * 15} mins (${diff} ahead)`;
+                    waitDisp.className = "text-xl font-bold text-gray-800";
+                }
+            }
+        }
+
+        function showAlert(num) {
+            const overlay = document.getElementById('queue-alert');
+            const numEl = document.getElementById('alert-number');
+            numEl.innerText = num;
+
+            overlay.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+            overlay.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                overlay.classList.remove('opacity-100', 'scale-100');
+                overlay.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+            }, 15000);
+        }
+
+        // Update checkStatus to set userTrackedNumber
+        // We override the global function to inject our real-time logic
+        // This is now handled within the async checkStatus itself
+        // But we keep this for compatibility if any other parts call it
+        const baseCheckStatus = checkStatus;
+        window.checkStatus = async function () {
+            await baseCheckStatus();
+        };
+
+        // Start the engine
+        initQueueTracker();
+    </script>
+</body>
+
+</html>

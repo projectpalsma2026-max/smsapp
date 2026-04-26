@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthFirst - Admin Login</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#007BFF',
+                        'soft-teal': '#20c997',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            background: radial-gradient(circle at top right, #0f172a, #1e293b);
+            color: #f8fafc;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-glow {
+            background: linear-gradient(135deg, #007BFF, #0056b3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.6);
+        }
+    </style>
+</head>
+
+<body class="antialiased flex h-screen items-center justify-center relative overflow-hidden">
+
+    <script>
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+
+    <!-- decorative blobs -->
+    <div class="absolute w-96 h-96 bg-blue-600 rounded-full blur-[100px] opacity-20 top-10 left-10"></div>
+    <div class="absolute w-96 h-96 bg-teal-500 rounded-full blur-[100px] opacity-20 bottom-10 right-10"></div>
+
+    <div class="w-full max-w-md glass rounded-[2rem] p-10 z-10 relative">
+        <div class="text-center mb-8">
+            <div
+                class="w-16 h-16 mx-auto bg-gradient-to-tr from-med-blue to-soft-teal rounded-2xl flex items-center justify-center text-white text-3xl font-bold mb-4 shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Master Admin Portal</h1>
+            <p class="text-gray-400 text-sm mt-1">Authenticate to access operations control.</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">Email Address</label>
+                <div class="relative">
+                    <i class="fas fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="email" id="email" required
+                        class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl py-3 px-10 focus:outline-none focus:border-med-blue focus:ring-1 focus:ring-med-blue transition"
+                        placeholder="admin@healthfirst.com">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">Password</label>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="password" id="password" required
+                        class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl py-3 px-10 focus:outline-none focus:border-med-blue focus:ring-1 focus:ring-med-blue transition"
+                        placeholder="••••••••">
+                </div>
+            </div>
+
+            <button type="submit" id="loginBtn"
+                class="w-full py-3.5 rounded-xl btn-glow font-bold text-lg mt-4 flex justify-center items-center gap-2">
+                Secure Login <i class="fas fa-arrow-right"></i>
+            </button>
+
+            <div id="error-msg" class="text-red-400 text-sm font-medium text-center hidden"></div>
+        </form>
+    </div>
+
+    <script>
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) window.location.href = 'admin.html';
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const errBox = document.getElementById('error-msg');
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            btn.disabled = true;
+            errBox.classList.add('hidden');
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) {
+                    errBox.innerText = error.message;
+                    errBox.classList.remove('hidden');
+                    btn.innerHTML = 'Secure Login <i class="fas fa-arrow-right"></i>';
+                    btn.disabled = false;
+                } else {
+                    const session = data.session;
+                    if (!session) {
+                        errBox.innerText = "Please verify your email address in your inbox before logging in.";
+                        errBox.classList.remove('hidden');
+                        btn.innerHTML = 'Secure Login <i class="fas fa-arrow-right"></i>';
+                        btn.disabled = false;
+                        return;
+                    }
+                    window.location.href = `admin.html?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+                }
+            } catch (err) {
+                errBox.innerText = "System Error: " + err.message;
+                errBox.classList.remove('hidden');
+                btn.innerHTML = 'Secure Login <i class="fas fa-arrow-right"></i>';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

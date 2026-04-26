@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin | HealthFirst Ecosystem</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastify for sleek notifications -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#007BFF',
+                        'soft-teal': '#20c997',
+                        'dark-bg': '#0f172a',
+                        'card-bg': 'rgba(30, 41, 59, 0.7)',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            background-image: radial-gradient(circle at 0% 0%, #1e293b 0%, transparent 50%), radial-gradient(circle at 100% 100%, #1e293b 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #20c997;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #20c997;
+        }
+
+        .toggle-label {
+            background-color: #ef4444;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(0, 123, 255, 0.2) 0%, transparent 100%);
+            border-left: 3px solid #007BFF;
+            color: white;
+        }
+
+        /* Modal Background */
+        .modal-bg {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="antialiased flex h-screen overflow-hidden">
+
+    <script>
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Security: Immediate Session Check
+        (async function checkSession() {
+            // Check for file:/// protocol URL tokens first
+            const params = new URLSearchParams(window.location.search);
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+
+            if (access_token && refresh_token) {
+                const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+                window.history.replaceState({}, document.title, window.location.pathname); // Hide tokens from URL
+
+                if (!error && data.session) {
+                    document.getElementById('admin-email').innerText = data.session.user.email;
+                    initDashboard();
+                    return;
+                }
+            }
+
+            // Normal session check
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('admin-email').innerText = session.user.email;
+                initDashboard();
+            }
+        })();
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 glass border-r border-slate-700/50 flex flex-col hidden md:flex z-20">
+        <div class="h-20 flex items-center px-6 border-b border-slate-700/50">
+            <div
+                class="w-10 h-10 bg-gradient-to-tr from-med-blue to-soft-teal rounded-xl flex items-center justify-center text-white font-bold mr-3 shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <div>
+                <span
+                    class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Master
+                    Admin</span>
+            </div>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <a href="#" onclick="showSection('dashboard')" id="nav-dashboard"
+                class="nav-link active flex items-center px-4 py-3 text-gray-300 hover:text-white rounded-r-xl transition">
+                <i class="fas fa-chart-pie w-6 opacity-75"></i> Overview
+            </a>
+            <a href="#" onclick="showSection('doctors')" id="nav-doctors"
+                class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition">
+                <i class="fas fa-user-md w-6 opacity-75"></i> Doctor Manager
+            </a>
+            <a href="#" onclick="showSection('schedule')" id="nav-schedule"
+                class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition">
+                <i class="fas fa-calendar-alt w-6 opacity-75"></i> Schedule Control
+            </a>
+            <a href="#" onclick="showSection('appointments')" id="nav-appointments"
+                class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition justify-between">
+                <div><i class="fas fa-list-check w-6 opacity-75"></i> Appointments</div>
+                <span id="nav-badge"
+                    class="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+            </a>
+            <a href="#" onclick="showSection('queue')" id="nav-queue"
+                class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition">
+                <i class="fas fa-users-viewfinder w-6 opacity-75"></i> Queue Control
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-700/50">
+            <div class="flex items-center gap-3 px-2 mb-4">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
+                    <i class="fas fa-user text-slate-400"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-xs text-gray-400 truncate" id="admin-email">Loading...</p>
+                </div>
+            </div>
+            <button onclick="logout()"
+                class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 font-medium transition text-sm">
+                <i class="fas fa-sign-out-alt"></i> Secure Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col relative z-10 w-full">
+        <!-- Header -->
+        <header class="h-20 glass border-b border-slate-700/50 flex items-center justify-between px-8">
+            <h1 class="text-2xl font-bold tracking-wide" id="page-title">Dashboard Overview</h1>
+            <div class="flex items-center gap-4">
+                <span id="live-badge"
+                    class="text-sm text-soft-teal font-semibold flex items-center gap-2 transition-all duration-300">
+                    <div class="w-2 h-2 rounded-full bg-soft-teal animate-pulse"></div> Live Sync Active
+                </span>
+                <span class="text-sm text-gray-400 bg-slate-800 px-4 py-1.5 rounded-full border border-slate-700"
+                    id="today-date-header"></span>
+            </div>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8">
+
+            <!-- SECTION: Dashboard Overview -->
+            <div id="sec-dashboard" class="space-y-6">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition">
+                        </div>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl border border-blue-500/30">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold tracking-widest uppercase mb-1">Today's
+                                Bookings</p>
+                            <h3 class="text-3xl font-bold text-white" id="stat-bookings">0</h3>
+                        </div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-6 -top-6 w-24 h-24 bg-teal-500/10 rounded-full blur-xl group-hover:bg-teal-500/20 transition">
+                        </div>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-2xl border border-teal-500/30">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold tracking-widest uppercase mb-1">Revenue Today
+                            </p>
+                            <h3 class="text-3xl font-bold text-white" id="stat-revenue">$0.00</h3>
+                        </div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/10 rounded-full blur-xl group-hover:bg-orange-500/20 transition">
+                        </div>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-2xl border border-orange-500/30">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold tracking-widest uppercase mb-1">Verified Today
+                            </p>
+                            <h3 class="text-3xl font-bold text-white" id="stat-pending">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Appointments Peek -->
+                <div class="glass rounded-2xl overflow-hidden mt-8">
+                    <div
+                        class="px-6 py-5 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/30">
+                        <h2 class="font-bold text-gray-200">Live Action Queue</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-800/50 text-gray-400 border-b border-slate-700/50">
+                                <tr>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Patient</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Doctor</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Slot</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-appointments-table" class="divide-y divide-slate-700/50 text-gray-300">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Doctor Manager -->
+            <div id="sec-doctors" class="hidden space-y-6">
+                <div class="flex justify-end">
+                    <button onclick="openDoctorModal()"
+                        class="px-6 py-2.5 bg-med-blue hover:bg-blue-600 text-white font-semibold rounded-xl transition shadow-lg shadow-blue-500/30 flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Add New Doctor
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="doctors-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- SECTION: Schedule Manager -->
+            <div id="sec-schedule" class="hidden space-y-6">
+                <div class="glass rounded-2xl overflow-hidden">
+                    <div class="px-6 py-5 border-b border-slate-700/50 bg-slate-800/30">
+                        <h2 class="font-bold text-gray-200">Weekly Flow Controller</h2>
+                        <p class="text-sm text-gray-400 mt-1">Changes here reflect instantly on the public website
+                            calendar.</p>
+                    </div>
+                    <div class="p-2 md:p-6 overflow-x-auto">
+                        <table class="w-full text-left text-sm min-w-[800px]">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-slate-700/50">
+                                    <th class="pb-4 font-semibold w-1/4 px-4 uppercase text-xs tracking-wider">Doctor
+                                    </th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Sun</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Mon</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Tue</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Wed</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Thu</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Fri</th>
+                                    <th class="pb-4 text-center uppercase text-xs tracking-wider">Sat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedule-table" class="divide-y divide-slate-700/50 text-gray-300">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Appointments List -->
+            <div id="sec-appointments" class="hidden space-y-6">
+                <div class="glass rounded-2xl overflow-hidden">
+                    <div
+                        class="px-6 py-5 border-b border-slate-700/50 bg-slate-800/30 flex justify-between items-center">
+                        <div>
+                            <h2 class="font-bold text-gray-200">Terminal Verification</h2>
+                            <p class="text-sm text-gray-400 mt-1">Review pending bookings and lock records.</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-800/50 text-gray-400 border-b border-slate-700/50">
+                                <tr>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Slot</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Patient &
+                                         Contact</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Doctor & Date
+                                    </th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Payment Phone
+                                    </th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Status</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">
+                                        Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-appointments-table" class="divide-y divide-slate-700/50 text-gray-300">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Queue Control -->
+            <div id="sec-queue" class="hidden space-y-6">
+                <div class="max-w-2xl mx-auto">
+                    <div class="glass rounded-[2.5rem] p-12 text-center relative overflow-hidden">
+                        <div class="absolute -top-10 -right-10 w-40 h-40 bg-med-blue/10 rounded-full blur-3xl"></div>
+                        <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-soft-teal/10 rounded-full blur-3xl"></div>
+                        
+                        <h2 class="text-2xl font-bold mb-2">Live Queue Status</h2>
+                        <p class="text-gray-400 mb-8">Manage the current patient flow in real-time.</p>
+
+                        <div class="mb-12">
+                            <span class="text-gray-500 uppercase tracking-widest text-sm font-bold">Now Calling</span>
+                            <div class="text-[120px] font-black text-white leading-none mt-4 animate-pulse" id="live-queue-number">0</div>
+                            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-bold mt-4">
+                                <div class="w-2 h-2 rounded-full bg-green-500 animate-ping"></div>
+                                LIVE SYNC ENABLED
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button id="next-btn" onclick="nextPatient()" class="p-6 rounded-2xl bg-med-blue hover:bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-all flex flex-col items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i id="next-icon" class="fas fa-user-plus text-3xl group-hover:scale-110 transition"></i>
+                                <span id="next-text" class="font-bold text-lg">Next Patient</span>
+                            </button>
+                            <button id="skip-btn" onclick="skipPatient()" class="p-6 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500 hover:text-white transition-all flex flex-col items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-forward-step text-3xl group-hover:scale-110 transition"></i>
+                                <span class="font-bold text-lg">Skip Number</span>
+                            </button>
+                        </div>
+
+                        <button onclick="resetQueue()" class="mt-8 text-gray-500 hover:text-red-400 transition flex items-center gap-2 mx-auto text-sm font-medium">
+                            <i class="fas fa-undo"></i> Start Day / Reset Counter
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL: Add/Edit Doctor -->
+    <div id="doctorModal" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl scale-95 transition-transform"
+            id="docModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Add New Doctor</h3>
+                <button onclick="closeDoctorModal()" class="text-gray-400 hover:text-white transition"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <form id="doctorForm" class="space-y-4">
+                <input type="hidden" id="docId">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-300 mb-1">Full Name</label>
+                    <input type="text" id="docName" required
+                        class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                        placeholder="Dr. John Doe">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-300 mb-1">Specialty</label>
+                    <input type="text" id="docSpec" required
+                        class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                        placeholder="e.g. Heart Surgeon">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-300 mb-1">Profile Image URL</label>
+                    <input type="url" id="docImg" required
+                        class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                        placeholder="https://...">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-300 mb-1">Consultation Fee ($)</label>
+                    <input type="number" step="0.01" id="docFee" required
+                        class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                        value="5.00">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-1">Start Time</label>
+                        <input type="time" id="docStartTime" required
+                            class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                            value="08:00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-1">Slot Duration</label>
+                        <input type="number" id="docSlotDuration" required
+                            class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                            value="15">
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full py-3 bg-med-blue hover:bg-blue-600 text-white rounded-xl font-bold transition shadow-lg mt-4">Save
+                    Doctor</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN CORE LOGIC -->
+    <script>
+        document.getElementById('today-date-header').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        // --- NAVIGATION LOGIC ---
+        function showSection(sec) {
+            document.querySelectorAll('.nav-link').forEach(l => {
+                l.classList.remove('active', 'border-l-3', 'text-white');
+                l.classList.add('text-gray-400');
+            });
+            const activeNav = document.getElementById('nav-' + sec);
+            activeNav.classList.remove('text-gray-400');
+            activeNav.classList.add('active', 'text-white');
+
+            ['dashboard', 'doctors', 'schedule', 'appointments'].forEach(s => {
+                document.getElementById('sec-' + s).classList.add('hidden');
+            });
+            document.getElementById('sec-' + sec).classList.remove('hidden');
+
+            const titles = {
+                'dashboard': 'Dashboard Overview',
+                'doctors': 'Master Doctor Database',
+                'schedule': 'Schedules & Routing',
+                'appointments': 'Terminal Verification',
+                'queue': 'Live Queue Management'
+            };
+            document.getElementById('page-title').innerText = titles[sec];
+        }
+
+        // --- APP STATE ---
+        let doctorsCache = {};
+        const todayStrLocal = new Date().toISOString().split('T')[0];
+
+        // --- INIT & REALTIME SYNC ---
+        async function initDashboard() {
+            await fetchDoctors();
+            await fetchAppointmentsData();
+
+            // Set up Supabase Realtime Subscription for incoming UI bookings
+            supabase
+                .channel('public:appointments')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, payload => {
+                    handleNewBooking(payload.new);
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
+                    fetchAppointmentsData(); // refresh UI if verified
+                })
+                .subscribe((status) => {
+                    console.log('Realtime Status:', status);
+                });
+
+            // Init Queue Sync
+            initQueueSync();
+        }
+
+        // --- QUEUE LOGIC ---
+        let currentQueueId = null;
+        let currentQueueNumber = 0;
+        const dingDong = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+        async function initQueueSync() {
+            // Fetch initial status
+            const { data, error } = await supabase.from('clinic_status').select('*').eq('doctor_id', 'global').single();
+            if (error) {
+                console.error("Queue row not found. Creating one...");
+                const { data: newData } = await supabase.from('clinic_status').insert([{ doctor_id: 'global', current_number: 0 }]).select().single();
+                if (newData) {
+                    currentQueueId = newData.id;
+                    updateQueueUI(0);
+                }
+            } else {
+                currentQueueId = data.id;
+                currentQueueNumber = data.current_number;
+                updateQueueUI(data.current_number);
+            }
+
+            // Realtime Listener for Queue
+            supabase
+                .channel('public:clinic_status')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clinic_status' }, payload => {
+                    if (payload.new.doctor_id === 'global') {
+                        currentQueueNumber = payload.new.current_number;
+                        updateQueueUI(currentQueueNumber);
+                        dingDong.play().catch(e => console.log("Audio play blocked by browser. Interaction needed."));
+                    }
+                })
+                .subscribe();
+        }
+
+        function updateQueueUI(num) {
+            const el = document.getElementById('live-queue-number');
+            if (el) el.innerText = num;
+        }
+
+        async function nextPatient() {
+            const btn = document.getElementById('next-btn');
+            const skipBtn = document.getElementById('skip-btn');
+            const icon = document.getElementById('next-icon');
+            const text = document.getElementById('next-text');
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            try {
+                // Find the next verified appointment slot
+                const { data: nextAppt, error: findErr } = await supabase
+                    .from('appointments')
+                    .select('slot_number')
+                    .eq('status', 'verified')
+                    .eq('appointment_date', todayDate)
+                    .gt('slot_number', currentQueueNumber)
+                    .order('slot_number', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (findErr) throw findErr;
+
+                if (!nextAppt) {
+                    Toastify({ 
+                        text: "No more verified patients for today!", 
+                        style: { background: "#6b7280" },
+                        duration: 4000 
+                    }).showToast();
+                    return;
+                }
+
+                const nextNum = nextAppt.slot_number;
+                
+                // Update the live status
+                const { error: updateErr } = await supabase
+                    .from('clinic_status')
+                    .update({ current_number: nextNum })
+                    .eq('doctor_id', 'global');
+
+                if (updateErr) throw updateErr;
+
+                // Success - Refresh local data to keep counts in sync
+                fetchAppointmentsData();
+
+                // Success - Start 15s Countdown Lock for BOTH buttons
+                btn.disabled = true;
+                skipBtn.disabled = true;
+                icon.className = "fas fa-clock text-3xl animate-spin";
+                
+                let timeLeft = 15;
+                const interval = setInterval(() => {
+                    timeLeft--;
+                    text.innerText = `Wait (${timeLeft}s)`;
+                    if (timeLeft <= 0) {
+                        clearInterval(interval);
+                        btn.disabled = false;
+                        skipBtn.disabled = false;
+                        icon.className = "fas fa-user-plus text-3xl group-hover:scale-110 transition";
+                        text.innerText = "Next Patient";
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.error("Queue progression failed:", err);
+                Toastify({ text: "Error: " + err.message, style: { background: "#ef4444" } }).showToast();
+            }
+        }
+
+        async function skipPatient() {
+            // Skip logic is essentially the same: find the next one
+            await nextPatient();
+        }
+
+        async function resetQueue() {
+            if (!confirm("Are you sure you want to reset the queue for the start of the day?")) return;
+            const { error } = await supabase.from('clinic_status').update({ current_number: 0 }).eq('doctor_id', 'global');
+            if (!error) {
+                Toastify({ text: "Queue reset to 0.", style: { background: "#6b7280" } }).showToast();
+            } else {
+                Toastify({ text: "Reset failed: " + error.message, style: { background: "#ef4444" } }).showToast();
+            }
+        }
+
+        function handleNewBooking(record) {
+            // Toastify Notification
+            Toastify({
+                text: "🚀 New Patient Booking: " + record.patient_name,
+                duration: 5000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: "linear-gradient(to right, #00b09b, #96c93d)",
+                    borderRadius: "10px",
+                    fontWeight: "bold"
+                }
+            }).showToast();
+
+            const badge = document.getElementById('live-badge');
+            badge.classList.remove('text-soft-teal');
+            badge.classList.add('text-orange-400', 'scale-110');
+            badge.innerHTML = `<div class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></div> New Booking Received!`;
+            setTimeout(() => {
+                badge.classList.remove('text-orange-400', 'scale-110');
+                badge.classList.add('text-soft-teal');
+                badge.innerHTML = `<div class="w-2 h-2 rounded-full bg-soft-teal animate-pulse"></div> Live Sync Active`;
+            }, 3000);
+
+            fetchAppointmentsData(); // Reload stats and lists
+        }
+
+        // --- DOCTORS MANAGER ---
+        async function fetchDoctors() {
+            const { data, error } = await supabase.from('doctors').select('*').order('id');
+            if (error) { console.error(error); return; }
+
+            doctorsCache = {};
+            const grid = document.getElementById('doctors-grid');
+            grid.innerHTML = '';
+
+            data.forEach(d => {
+                doctorsCache[d.id] = d.name;
+                grid.innerHTML += `
+                    <div class="glass p-5 rounded-2xl relative group border border-transparent hover:border-slate-600 transition">
+                        <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                            <button onclick="deleteDoctor(${d.id})" class="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="fas fa-trash text-xs"></i></button>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-600">
+                                <img src="${d.image_url}" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg">${d.name}</h4>
+                                <p class="text-soft-teal text-sm font-medium mb-1">${d.specialty}</p>
+                                <p class="text-xs text-gray-500">Fee: $${d.fee}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // After loading doctors, refresh schedule mapping
+            fetchSchedules(data);
+        }
+
+        function openDoctorModal() {
+            document.getElementById('doctorForm').reset();
+            document.getElementById('docId').value = '';
+            document.getElementById('doctorModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('docModalContent').classList.remove('scale-95'), 10);
+        }
+
+        function closeDoctorModal() {
+            document.getElementById('docModalContent').classList.add('scale-95');
+            setTimeout(() => document.getElementById('doctorModal').classList.add('hidden'), 200);
+        }
+
+        document.getElementById('doctorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('docName').value,
+                specialty: document.getElementById('docSpec').value,
+                image_url: document.getElementById('docImg').value,
+                fee: parseFloat(document.getElementById('docFee').value),
+                start_time: document.getElementById('docStartTime').value,
+                slot_duration: parseInt(document.getElementById('docSlotDuration').value)
+            };
+
+            const { data: newDoc, error } = await supabase.from('doctors').insert([payload]).select();
+            if (error) { alert('Error adding doctor: ' + error.message); return; }
+
+            const docId = newDoc[0].id;
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const schedPayload = days.map((d, i) => ({
+                doctor_id: docId,
+                day_index: i,
+                day_name: d,
+                is_active: i !== 5 // default open except friday
+            }));
+
+            const { error: schedError } = await supabase.from('doctor_schedule').insert(schedPayload);
+            if (schedError) {
+                console.error(schedError);
+                if (schedError.code === '42501') {
+                    alert("WARNING: Supabase rejected the schedule because you didn't run the latest schema.sql (missing INSERT policy). Please run it in your SQL Editor!");
+                } else {
+                    alert('Error creating schedule: ' + schedError.message);
+                }
+            } else {
+                Toastify({ text: "Doctor successfully added to the ecosystem!", style: { background: "#007BFF" } }).showToast();
+            }
+
+            closeDoctorModal();
+            fetchDoctors();
+        });
+
+        async function deleteDoctor(id) {
+            if (!confirm('Delete this doctor? This removes their schedule too.')) return;
+            await supabase.from('doctors').delete().eq('id', id);
+            fetchDoctors();
+        }
+
+        // --- SCHEDULE MANAGER ---
+        async function fetchSchedules(doctorsList) {
+            let { data: sched, error } = await supabase.from('doctor_schedule').select('*');
+            if (error) { console.error(error); return; }
+
+            let grouped = {};
+            sched.forEach(s => {
+                if (!grouped[s.doctor_id]) grouped[s.doctor_id] = {};
+                grouped[s.doctor_id][s.day_index] = s;
+            });
+
+            // Auto-heal missing schedules
+            let healed = false;
+            let rlsBroken = false;
+            for (let i = 0; i < doctorsList.length; i++) {
+                const docId = doctorsList[i].id;
+                if (!grouped[docId] || Object.keys(grouped[docId]).length === 0) {
+                    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const px = days.map((d, idx) => ({ doctor_id: docId, day_index: idx, day_name: d, is_active: idx !== 5 }));
+                    const { error: healErr } = await supabase.from('doctor_schedule').insert(px);
+                    if (healErr) {
+                        if (healErr.code === '42501') rlsBroken = true;
+                        console.error(healErr);
+                    } else {
+                        healed = true;
+                    }
+                }
+            }
+
+            if (rlsBroken) {
+                document.getElementById('page-title').innerHTML = `<span class="text-red-500 bg-red-100/10 px-4 py-2 rounded-lg border border-red-500"><i class="fas fa-exclamation-triangle"></i> CRITICAL: SQL Security Rules Missing (Check Supabase)</span>`;
+            } else if (healed) {
+                // Refetch after successful heal
+                const n = await supabase.from('doctor_schedule').select('*');
+                sched = n.data;
+                grouped = {};
+                sched.forEach(s => {
+                    if (!grouped[s.doctor_id]) grouped[s.doctor_id] = {};
+                    grouped[s.doctor_id][s.day_index] = s;
+                });
+            }
+
+            const tbody = document.getElementById('schedule-table');
+            tbody.innerHTML = '';
+
+            doctorsList.forEach(doc => {
+                let tr = `<tr class="hover:bg-slate-800/30 transition-colors border-b border-slate-700/50">
+                            <td class="py-4 px-4 font-semibold text-white flex items-center gap-3">
+                                <img src="${doc.image_url}" class="w-8 h-8 rounded-full border border-slate-600">
+                                ${doc.name}
+                            </td>`;
+
+                for (let i = 0; i <= 6; i++) {
+                    const row = grouped[doc.id]?.[i];
+                    if (!row) { tr += `<td class="text-center text-red-500 border-l border-slate-700/30 font-bold" title="RLS Blocked Insert">Error</td>`; continue; }
+
+                    const checked = row.is_active ? 'checked' : '';
+                    tr += `
+                    <td class="py-4 text-center border-l border-slate-700/30">
+                        <div class="relative inline-block w-10 align-middle">
+                            <input type="checkbox" id="t-${row.id}" ${checked} onchange="updateSched(${row.id}, this.checked)" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-slate-400 appearance-none cursor-pointer transition-all duration-300 z-10 top-0 left-0"/>
+                            <label for="t-${row.id}" class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer transition-colors duration-300"></label>
+                        </div>
+                    </td>`;
+                }
+                tr += `</tr>`;
+                tbody.innerHTML += tr;
+            });
+        }
+
+        async function updateSched(id, active) {
+            const { error } = await supabase.from('doctor_schedule').update({ is_active: active }).eq('id', id);
+            if (error) alert("Error modifying live schedule.");
+        }
+
+        // --- APPOINTMENTS & DASHBOARD STATS ---
+        async function fetchAppointmentsData() {
+            const { data: allAppts, error } = await supabase
+                .from('appointments')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) { console.error(error); return; }
+
+            const localNow = new Date();
+            const actualTodayStr = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
+
+            const todayAppts = allAppts.filter(a => a.appointment_date === actualTodayStr);
+            const pendingToday = todayAppts.filter(a => a.status === 'pending');
+            const verifiedTodayCount = todayAppts.filter(a => a.status === 'verified').length;
+
+            // STATS 
+            document.getElementById('stat-bookings').innerText = todayAppts.length;
+            document.getElementById('stat-revenue').innerText = `$${(verifiedTodayCount * 5).toFixed(2)}`;
+
+            const allVerified = allAppts.filter(a => a.status === 'verified');
+            document.getElementById('stat-pending').innerText = allVerified.length;
+
+            // Notification Badge (All Pending)
+            const allPending = allAppts.filter(a => a.status === 'pending');
+            const badge = document.getElementById('nav-badge');
+            if (allPending.length > 0) {
+                badge.innerText = allPending.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // TABLES
+            const fullTable = document.getElementById('full-appointments-table');
+            const dashTable = document.getElementById('dash-appointments-table');
+            fullTable.innerHTML = ''; dashTable.innerHTML = '';
+
+            if (allAppts.length === 0) {
+                fullTable.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">Zero database entries found for today.</td></tr>`;
+            }
+
+            allAppts.forEach((a, index) => {
+                const docName = doctorsCache[a.doctor_id] || 'Unknown';
+                const isPend = a.status === 'pending';
+
+                const badgeHtml = a.status === 'pending'
+                    ? `<span class="px-3 py-1 rounded-full text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">PENDING</span>`
+                    : a.status === 'verified'
+                        ? `<span class="px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30">VERIFIED</span>`
+                        : `<span class="px-3 py-1 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">EXPIRED</span>`;
+
+                const verifyBtn = a.status === 'pending'
+                    ? `<button onclick="verifyPayment(${a.id})" class="px-4 py-1.5 bg-soft-teal/20 text-soft-teal hover:bg-soft-teal hover:text-dark-bg rounded border border-soft-teal transition text-xs font-bold shadow-[0_0_10px_rgba(32,201,151,0.2)]">VERIFY</button>`
+                    : `<span class="text-xs text-gray-500 font-medium"><i class="fas fa-check-circle text-green-500 mr-1"></i> LOCKED</span>`;
+
+                // Appointments Tab (Detailed)
+                fullTable.innerHTML += `
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                        <td class="px-6 py-4">
+                            <p class="text-xl font-black text-med-blue">#${a.slot_number}</p>
+                            <p class="text-[10px] text-gray-500 font-mono">ID: ${a.id}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="font-semibold text-white tracking-wide">${a.patient_name}</p>
+                            <p class="text-xs text-gray-500 mt-1"><i class="fas fa-phone-alt mr-1"></i>${a.phone} &bull; ${a.district}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-300 font-medium">${docName}</p>
+                            <p class="text-xs text-med-blue font-bold mt-1">${a.appointment_date}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-white font-bold">${a.payment_phone || 'N/A'}</p>
+                        </td>
+                        <td class="px-6 py-4">${badgeHtml}</td>
+                        <td class="px-6 py-4 text-right">${verifyBtn}</td>
+                    </tr>
+                `;
+
+                // Dashboard Tab (Brief, top 6)
+                if (index < 6) {
+                    dashTable.innerHTML += `
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="px-6 py-4 font-semibold text-white">${a.patient_name}</td>
+                            <td class="px-6 py-4 text-gray-400">${docName}</td>
+                            <td class="px-6 py-4 font-bold text-med-blue">#${a.slot_number}</td>
+                            <td class="px-6 py-4">${badgeHtml}</td>
+                        </tr>
+                    `;
+                }
+            });
+        }
+
+        async function verifyPayment(id) {
+            const { error } = await supabase.from('appointments').update({ status: 'verified' }).eq('id', id);
+            if (!error) {
+                Toastify({ text: "Payment verified successfully!", style: { background: "#20c997" }, duration: 3000 }).showToast();
+                // fetchAppointmentsData is actually triggered safely by the UPDATE Realtime logic we bound above.
+            }
+        }
+    </script>
+</body>
+
+</html>

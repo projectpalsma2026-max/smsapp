@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthFirst - Book Appointment</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#007BFF',
+                        'soft-teal': '#20c997',
+                        'light-bg': '#f3f8fc',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Anti-gravity & Floating Minimalism Styles */
+        body {
+            background: radial-gradient(circle at top left, #f8fafc, #e0f2fe);
+            background-attachment: fixed;
+            color: #1e293b;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Classes */
+        .glass {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-glow {
+            background: linear-gradient(135deg, #007BFF, #0056b3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.5);
+        }
+
+        /* Float Animations */
+        @keyframes float-wizard {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        @keyframes float-blob {
+            0% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+            100% { transform: translateY(0px) scale(1); }
+        }
+
+        .animate-float-wizard { animation: float-wizard 6s ease-in-out infinite; }
+        .animate-float-blob { animation: float-blob 8s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-blob 7s ease-in-out infinite; animation-delay: 2s; }
+
+        /* Step Transitions */
+        .step-container {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .step-hidden {
+            opacity: 0;
+            transform: translateX(30px);
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+        }
+        .step-active {
+            opacity: 1;
+            transform: translateX(0);
+            position: relative;
+            visibility: visible;
+        }
+
+        /* Progress Bar */
+        .progress-step {
+            transition: all 0.3s ease;
+        }
+        .progress-line {
+            transition: width 0.4s ease;
+        }
+
+        /* Booking Grid Logic Styling */
+        .slot {
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 3rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            user-select: none;
+        }
+        .slot-available {
+            background: white;
+            border: 2px solid #20c997;
+            color: #1e293b;
+            cursor: pointer;
+        }
+        .slot-available:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px rgba(32, 201, 151, 0.2);
+        }
+        .slot-occupied {
+            background: #e2e8f0;
+            border: 2px solid #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .slot-selected {
+            background: #007BFF;
+            border: 2px solid #007BFF;
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        /* Blob Background Shapes */
+        .blob {
+            position: fixed;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.5;
+            border-radius: 50%;
+        }
+
+        /* Date selector styling */
+        .date-card {
+            min-width: 80px;
+            scroll-snap-align: start;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col items-center py-10 px-4">
+
+    <!-- Supabase Configuration - MUST REPLACE WITH ACTUAL KEYS -->
+    <script>
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+
+    <!-- Background Blobs -->
+    <div class="blob bg-blue-300 w-[500px] h-[500px] top-0 left-0 animate-float-blob"></div>
+    <div class="blob bg-teal-200 w-[400px] h-[400px] bottom-0 right-0 animate-float-delayed"></div>
+
+    <!-- Navigation Bar inside page -->
+    <div class="w-full max-w-4xl mb-8 flex items-center justify-between z-10 relative">
+        <a href="index.html" class="flex items-center gap-2 cursor-pointer glass px-4 py-2 rounded-xl hover:shadow-lg transition">
+            <i class="fas fa-arrow-left text-med-blue"></i>
+            <span class="font-semibold text-gray-700">Back to Home</span>
+        </a>
+        <div class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-med-blue to-soft-teal">
+            HealthFirst
+        </div>
+    </div>
+
+    <!-- Wizard Container -->
+    <div class="w-full max-w-4xl glass rounded-[2.5rem] p-6 md:p-10 relative shadow-xl z-10 flex flex-col bg-white/70 animate-float-wizard">
+        <h3 class="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-med-blue to-soft-teal">Balan Qabso Wizard</h3>
+
+        <!-- Progress Bar (5 Steps now) -->
+        <div class="mb-10 px-2 sm:px-4">
+            <div class="flex justify-between items-center relative">
+                <!-- Progress line background -->
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1.5 bg-gray-200 rounded-full z-0"></div>
+                <!-- Progress line active -->
+                <div id="progress-line" class="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-med-blue to-soft-teal rounded-full z-0 progress-line" style="width: 0%;"></div>
+                
+                <!-- Steps -->
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step active" id="pb-step-1">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-med-blue text-med-blue flex items-center justify-center font-bold shadow-md transition-all pb-icon">1</div>
+                    <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Doctor</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step text-gray-400" id="pb-step-2">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center font-bold transition-all pb-icon">2</div>
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider font-medium">Date</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step text-gray-400" id="pb-step-3">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center font-bold transition-all pb-icon">3</div>
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider font-medium">Details</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step text-gray-400" id="pb-step-4">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center font-bold transition-all pb-icon">4</div>
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider font-medium">Slot</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step text-gray-400" id="pb-step-5">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center font-bold transition-all pb-icon">5</div>
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider font-medium">Review</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2 progress-step text-gray-400" id="pb-step-6">
+                    <div class="w-10 h-10 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center font-bold transition-all pb-icon">6</div>
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider font-medium">Pay</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-[2.5rem] hidden">
+            <i class="fas fa-spinner fa-spin text-4xl text-med-blue mb-4"></i>
+            <p class="font-bold text-gray-700" id="loading-text">Loading...</p>
+        </div>
+
+        <!-- Steps Container -->
+        <div class="relative flex-1 overflow-hidden min-h-[460px] p-2" id="steps-container">
+            
+            <!-- STEP 1: Doctor -->
+            <div id="step-1" class="step-container step-active w-full h-full">
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Select Your Specialist</h4>
+                    <p class="text-gray-500">Connecting to live hospital database...</p>
+                </div>
+                
+                <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-6" id="doctors-list">
+                    <!-- Populated by Supabase -->
+                </div>
+            </div>
+
+            <!-- STEP 2: Date & Availability -->
+            <div id="step-2" class="step-container step-hidden w-full h-full">
+                <button onclick="goToStep(1)" class="text-sm text-gray-500 hover:text-med-blue mb-4 flex items-center transition bg-white/50 px-3 py-1.5 rounded-full glass w-max">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </button>
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Choose a Date</h4>
+                    <p class="text-gray-500">Select an available day for your appointment with <span id="lbl-doctor" class="font-bold text-med-blue"></span></p>
+                </div>
+
+                <div class="w-full max-w-2xl mx-auto">
+                    <div class="flex items-center gap-2">
+                        <button onclick="scrollDates(-1)" class="w-10 h-10 rounded-full glass flex items-center justify-center text-gray-600 hover:text-med-blue z-10 flex-shrink-0">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        
+                        <div id="calendar-scroll" class="flex flex-1 gap-3 overflow-x-auto hide-scrollbar scroll-smooth snap-x pb-4 pt-2 px-2">
+                            <!-- Populated by JS/Supabase logic -->
+                        </div>
+
+                        <button onclick="scrollDates(1)" class="w-10 h-10 rounded-full glass flex items-center justify-center text-gray-600 hover:text-med-blue z-10 flex-shrink-0">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 text-center" id="date-action">
+                        <button onclick="goToStep(3)" class="btn-glow px-10 py-3 rounded-xl font-bold text-lg shadow-lg opacity-50 cursor-not-allowed transition" id="btn-next-date" disabled>
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Details -->
+            <div id="step-3" class="step-container step-hidden w-full h-full max-w-2xl mx-auto">
+                <button onclick="goToStep(2)" class="text-sm text-gray-500 hover:text-med-blue mb-4 flex items-center transition bg-white/50 px-3 py-1.5 rounded-full glass w-max">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </button>
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Your Information</h4>
+                    <p class="text-gray-500">Please provide your details to verify the booking.</p>
+                </div>
+                
+                <div class="glass p-6 rounded-[2rem] bg-white/60 space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1 text-gray-700 ml-1">Full Name</label>
+                        <input type="text" id="patientName" placeholder="Maxamed Cali" class="w-full p-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-med-blue outline-none transition shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1 text-gray-700 ml-1">Phone Number</label>
+                        <input type="text" id="patientPhone" placeholder="061XXXXXXX" class="w-full p-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-med-blue outline-none transition shadow-sm">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 ml-1">City</label>
+                            <select id="citySelect" onchange="updateDistricts()" class="w-full p-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-med-blue outline-none cursor-pointer shadow-sm">
+                                <option value="" disabled selected>Choose City</option>
+                                <option value="Mogadishu">Mogadishu</option>
+                                <option value="Hargeisa">Hargeisa</option>
+                                <option value="Garowe">Garowe</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 ml-1">District</label>
+                            <select id="districtSelect" disabled class="w-full p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 outline-none cursor-pointer transition shadow-sm">
+                                <option value="" disabled selected>Waiting on City...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button onclick="submitInfo()" class="w-full py-4 rounded-xl btn-glow font-bold text-lg mt-4 shadow-lg">Proceed to Number Selection</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Number Grid -->
+            <div id="step-4" class="step-container step-hidden w-full h-full max-w-3xl mx-auto">
+                <button onclick="goToStep(3)" class="text-sm text-gray-500 hover:text-med-blue mb-4 flex items-center transition bg-white/50 px-3 py-1.5 rounded-full glass w-max">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </button>
+                
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Select Your Number</h4>
+                    <p class="text-gray-500">Live query for <span class="font-bold text-gray-700" id="lbl-date"></span>.</p>
+                </div>
+                
+                <div class="glass p-6 md:p-8 rounded-[2rem] bg-white/60">
+                    <div class="flex justify-center gap-6 mb-6 text-sm font-medium">
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-white border-2 border-soft-teal"></div> Available</div>
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-slate-200 border-2 border-slate-300"></div> Booked</div>
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-med-blue border-2 border-med-blue"></div> Selected</div>
+                    </div>
+
+                    <div id="numberGrid" class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-3">
+                        <!-- JS Populated 1-30 -->
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200/60 text-center">
+                        <button onclick="goToStep(5)" class="btn-glow px-10 py-3 rounded-xl font-bold transition shadow-lg opacity-50 cursor-not-allowed" id="btn-to-summary" disabled>
+                            Review Summary
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Final Summary -->
+            <div id="step-5" class="step-container step-hidden w-full h-full max-w-sm mx-auto">
+                <button onclick="goToStep(4)" class="text-sm text-gray-500 hover:text-med-blue mb-4 flex items-center transition bg-white/50 px-3 py-1.5 rounded-full glass w-max">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </button>
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Final Summary</h4>
+                    <p class="text-gray-500 text-sm">Review your details before booking.</p>
+                </div>
+
+                <div id="summary-content">
+                    <div class="glass rounded-2xl p-6 bg-white/60 border border-gray-200 shadow-lg relative overflow-hidden animate-float-wizard" style="animation-duration: 8s;">
+                        <div class="absolute -right-10 -top-10 w-24 h-24 bg-med-blue/10 rounded-full blur-xl"></div>
+                        
+                        <div class="space-y-3 mb-6 text-sm">
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Patient:</span>
+                                <span class="font-semibold" id="sumName">--</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Doctor:</span>
+                                <span class="font-semibold" id="sumDoc">--</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Date:</span>
+                                <span class="font-semibold" id="sumDate">--</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-200/60 pb-2">
+                                <span class="text-gray-500">Queue No:</span>
+                                <span class="font-bold text-med-blue text-lg" id="sumNum">--</span>
+                            </div>
+                            <div class="flex justify-between py-2 bg-blue-50/50 rounded px-2">
+                                <span class="font-bold text-gray-700">Total Fee:</span>
+                                <span class="font-bold text-green-600">$5.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg mt-4 hidden shadow-sm text-left mx-auto" id="arrivalWarning">
+                        <p class="text-red-700 text-sm font-semibold flex items-center"><i class="fas fa-exclamation-circle mr-2"></i> Ogeysiis Muhiim ah</p>
+                        <p class="text-red-600 text-xs mt-1 leading-relaxed" id="sumWarningText"></p>
+                    </div>
+                    
+                    <button onclick="submitBooking()" class="w-full mt-6 py-4 rounded-xl btn-glow font-bold text-lg shadow-xl">
+                        Submit Booking
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 6: Payment Screen -->
+            <div id="step-6" class="step-container step-hidden w-full h-full max-w-sm mx-auto">
+                <div class="text-center mb-6">
+                    <h4 class="text-2xl font-bold text-gray-800">Secure Payment</h4>
+                    <p class="text-gray-500 text-sm">Complete your payment to confirm the appointment.</p>
+                </div>
+
+                <!-- Payment Form (Phone Input) -->
+                <div id="payment-form" class="space-y-6">
+                    <div class="glass rounded-2xl p-6 bg-white/60 border border-gray-200 shadow-lg">
+                        <div class="mb-4">
+                            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Enter Your Payment Number (EVC Plus)</label>
+                            <input type="text" id="senderPhone" placeholder="061XXXXXXX" class="w-full p-4 rounded-xl border-2 border-med-blue/20 bg-white focus:border-med-blue outline-none transition text-center font-bold text-lg">
+                        </div>
+
+                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center shadow-sm">
+                            <p class="text-sm text-gray-800 mb-2 font-medium">Send <b>$5.00</b> to Business Number:</p>
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="text-xl font-bold tracking-wider text-med-blue">0615555555</span>
+                                <button onclick="copyPhone()" class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-med-blue transition-colors shadow-sm" title="Copy Number">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="processPayment()" class="w-full py-4 rounded-xl btn-glow font-bold text-lg shadow-xl">
+                        Pay Now
+                    </button>
+                </div>
+
+                <!-- Payment Pending View (Countdown & Realtime) -->
+                <div id="payment-pending-view" class="hidden text-center space-y-6">
+                    <div class="relative inline-block">
+                        <div class="w-32 h-32 rounded-full border-4 border-med-blue/20 flex items-center justify-center mx-auto">
+                            <span id="timer-display" class="text-3xl font-bold text-med-blue">10:00</span>
+                        </div>
+                        <div class="absolute inset-0 rounded-full border-4 border-med-blue border-t-transparent animate-spin" style="animation-duration: 2s;"></div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="text-xl font-bold text-gray-800">Waiting for Payment...</h5>
+                        <p class="text-gray-500 text-sm mt-2">Please send <b>$5.00</b> to <b>0615555555</b> using your phone number <b id="display-sender-phone"></b>.</p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-sm text-amber-700">
+                        <i class="fas fa-info-circle mr-2"></i> This window will automatically close if payment is not received within 10 minutes.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUCCESS MESSAGE -->
+            <div id="step-success" class="step-container step-hidden w-full h-full flex flex-col items-center justify-center py-10">
+                <div class="w-24 h-24 rounded-full bg-green-100 text-green-500 flex items-center justify-center text-5xl mb-6 shadow-sm border-2 border-white">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Payment Confirmed!</h2>
+                <p class="text-gray-500 mb-8 max-w-md text-center">Your appointment is ready and recorded securely in our system.</p>
+                <div class="flex gap-4">
+                    <a href="index.html" class="px-8 py-3 rounded-xl bg-gray-800 text-white font-bold hover:bg-gray-700 transition shadow-lg">Return Home</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- State Management ---
+        let bookingState = {
+            isBookingStarted: false,
+            doctorId: null,
+            doctorName: null,
+            doctorStartTime: null,
+            doctorSlotDuration: null,
+            dateSelected: null,
+            name: '',
+            phone: '',
+            city: '',
+            district: '',
+            slotSelected: null,
+            estimatedTimeStr: '',
+            allowedDayIndexes: [], // fetched from doctor_schedule
+            appointmentId: null,
+            timerInterval: null
+        };
+
+        const districtsData = {
+            "Mogadishu": ["Hodan", "Hawlwadaag", "Abdiaziz", "Waberi", "Heliwaa"],
+            "Hargeisa": ["Koodbuur", "26 June", "Gacan Libaax", "Ahmed Dhagax"],
+            "Garowe": ["Waberi", "Hodhan", "Hantiwadag", "1da May"]
+        };
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDoctors();
+            restorePaymentSession(); // Restore if refreshed
+        });
+
+        // 0. Persistence Logic
+        function restorePaymentSession() {
+            const savedSession = localStorage.getItem('payment_session');
+            if (savedSession) {
+                const session = JSON.parse(savedSession);
+                const now = new Date().getTime();
+                const expiry = new Date(session.expiresAt).getTime();
+                
+                if (expiry > now) {
+                    bookingState.appointmentId = session.id;
+                    bookingState.isBookingStarted = true;
+                    
+                    // Restore UI State
+                    goToStep(6);
+                    document.getElementById('payment-form').classList.add('hidden');
+                    document.getElementById('payment-pending-view').classList.remove('hidden');
+                    document.getElementById('display-sender-phone').innerText = session.phone;
+                    
+                    const remainingSeconds = Math.floor((expiry - now) / 1000);
+                    startPaymentTimer(0, remainingSeconds); // Start with remaining seconds
+                    subscribeToPaymentStatus(session.id);
+                } else {
+                    localStorage.removeItem('payment_session');
+                }
+            }
+        }
+
+        // 1. Exit Guard Logic
+        window.addEventListener('beforeunload', function (e) {
+            if (bookingState.isBookingStarted) {
+                const msg = "Ma hubtaa inaad rabto inaad ka baxdo? Balantaadu weli ma dhamaystirna.";
+                e.preventDefault();
+                e.returnValue = msg;
+                return msg;
+            }
+        });
+
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        // --- UI Flow ---
+        function updateProgressUI(stepIndex) {
+            if(stepIndex > 6) return;
+            const line = document.getElementById('progress-line');
+            const pct = ((stepIndex - 1) / 5) * 100;
+            line.style.width = pct + '%';
+
+            for(let i=1; i<=6; i++) {
+                const stepEl = document.getElementById('pb-step-'+i);
+                if(!stepEl) continue;
+                const iconEl = stepEl.querySelector('.pb-icon');
+                
+                stepEl.classList.remove('active', 'completed', 'text-gray-400');
+                iconEl.classList.remove('border-med-blue', 'text-med-blue', 'border-gray-200', 'bg-med-blue', 'text-white', 'border-green-500', 'bg-green-500');
+
+                if (i < stepIndex) {
+                    stepEl.classList.add('completed');
+                    iconEl.classList.add('border-green-500', 'bg-green-500', 'text-white');
+                    iconEl.innerHTML = '<i class="fas fa-check"></i>';
+                } else if (i === stepIndex) {
+                    stepEl.classList.add('active');
+                    iconEl.classList.add('border-med-blue', 'text-med-blue');
+                    iconEl.innerHTML = i;
+                } else {
+                    stepEl.classList.add('text-gray-400');
+                    iconEl.classList.add('border-gray-200');
+                    iconEl.innerHTML = i;
+                }
+            }
+        }
+
+        function goToStep(stepNumber) {
+            if(stepNumber === 5 && !bookingState.slotSelected) return;
+
+            document.querySelectorAll('.step-container').forEach(el => {
+                el.classList.remove('step-active');
+                el.classList.add('step-hidden');
+            });
+            
+            const target = stepNumber === 7 ? document.getElementById('step-success') : document.getElementById('step-'+stepNumber);
+            if(target) {
+                target.classList.remove('step-hidden');
+                setTimeout(() => {
+                    target.classList.add('step-active');
+                }, 10);
+            }
+            
+            updateProgressUI(stepNumber);
+        }
+
+        function copyPhone() {
+            navigator.clipboard.writeText('0615555555').then(() => {
+                alert('Number copied to clipboard!');
+            });
+        }
+
+        // --- Step 1: Doctors (SUPABASE) ---
+        async function fetchDoctors() {
+            showLoading('Fetching Specialists...');
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                alert('Please configure Supabase Credentials in the script tags first!');
+                hideLoading();
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase.from('doctors').select('*');
+                if(error) throw error;
+                
+                const container = document.getElementById('doctors-list');
+                container.innerHTML = '';
+                
+                data.forEach(doc => {
+                    container.innerHTML += `
+                        <div onclick="selectDoctor(${doc.id}, '${doc.name}', '${doc.start_time || '08:00:00'}', ${doc.slot_duration || 15})" class="glass rounded-3xl p-6 flex flex-col items-center text-center cursor-pointer transition-all hover:-translate-y-2 hover:shadow-xl hover:border-med-blue bg-white/50 group border border-transparent">
+                            <div class="w-24 h-24 rounded-full overflow-hidden mb-4 border-4 border-white shadow-md group-hover:border-blue-100 transition">
+                                <img src="${doc.image_url}" class="w-full h-full object-cover">
+                            </div>
+                            <h5 class="font-bold text-lg text-gray-800">${doc.name}</h5>
+                            <p class="text-sm text-soft-teal font-semibold mt-1">${doc.specialty}</p>
+                            <p class="text-xs text-gray-400 font-medium mt-2">Fee: $${doc.fee}</p>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Error connecting to Supabase: " + err.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function selectDoctor(id, name, startTime, slotDuration) {
+            bookingState.doctorId = id;
+            bookingState.doctorName = name;
+            bookingState.doctorStartTime = startTime;
+            bookingState.doctorSlotDuration = slotDuration;
+            document.getElementById('lbl-doctor').innerText = name;
+            bookingState.isBookingStarted = true;
+            
+            await fetchDoctorSchedule(id);
+            goToStep(2);
+        }
+
+        // --- Step 2: Calendar (SUPABASE Schedule) ---
+        async function fetchDoctorSchedule(doctorId) {
+            showLoading('Checking Schedule...');
+            try {
+                const { data, error } = await supabase
+                    .from('doctor_schedule')
+                    .select('day_index')
+                    .eq('doctor_id', doctorId)
+                    .eq('is_active', true);
+                    
+                if (error) throw error;
+                
+                bookingState.allowedDayIndexes = data.map(d => d.day_index);
+                renderCalendar();
+            } catch (err) {
+                console.error(err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar-scroll');
+            container.innerHTML = '';
+            
+            const today = new Date();
+            const daysNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            for(let i=0; i<14; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() + i);
+                
+                const dayIndex = d.getDay();
+                const isAllowed = bookingState.allowedDayIndexes.includes(dayIndex);
+                
+                const dateNum = d.getDate();
+                const dayName = daysNames[dayIndex];
+                
+                // Keep strictly to UTC or local depending on requirement, here ISO string YYYY-MM-DD
+                const fullDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                const cardClass = isAllowed 
+                    ? "date-card glass bg-white/80 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-med-blue hover:-translate-y-1 transition-all border border-transparent shadow-sm"
+                    : "date-card !bg-gray-100/50 rounded-2xl p-4 flex flex-col items-center justify-center opacity-50 cursor-not-allowed border border-gray-200 grayscale";
+
+                const onClick = isAllowed ? `onclick="selectDate('${fullDateStr}', this)"` : '';
+
+                container.innerHTML += `
+                    <div class="${cardClass}" ${onClick}>
+                        <span class="text-sm font-semibold text-gray-500 mb-1">${dayName}</span>
+                        <span class="text-2xl font-bold ${isAllowed ? 'text-gray-800' : 'text-gray-400'}">${dateNum}</span>
+                    </div>
+                `;
+            }
+
+            document.getElementById('btn-next-date').disabled = true;
+            document.getElementById('btn-next-date').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function scrollDates(dir) {
+            const container = document.getElementById('calendar-scroll');
+            container.scrollBy({ left: dir * 150, behavior: 'smooth' });
+        }
+
+        function selectDate(dateStr, el) {
+            bookingState.dateSelected = dateStr;
+            
+            document.querySelectorAll('.date-card').forEach(card => card.classList.remove('ring-2', 'ring-med-blue', 'bg-blue-50/80'));
+            el.classList.add('ring-2', 'ring-med-blue', 'bg-blue-50/80');
+
+            const d = new Date(dateStr);
+            document.getElementById('lbl-date').innerText = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            
+            const btn = document.getElementById('btn-next-date');
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.disabled = false;
+        }
+
+        // --- Step 3: Details ---
+        function updateDistricts() {
+            const city = document.getElementById('citySelect').value;
+            const distSelect = document.getElementById('districtSelect');
+            
+            distSelect.innerHTML = '<option value="" disabled selected>Choose District</option>';
+            if(city && districtsData[city]) {
+                districtsData[city].forEach(d => {
+                    distSelect.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+                distSelect.disabled = false;
+                distSelect.classList.remove('bg-gray-50', 'text-gray-500');
+                distSelect.classList.add('bg-white', 'text-gray-800');
+            }
+        }
+
+        function submitInfo() {
+            const name = document.getElementById('patientName').value.trim();
+            const phone = document.getElementById('patientPhone').value.trim();
+            const city = document.getElementById('citySelect').value;
+            const district = document.getElementById('districtSelect').value;
+
+            if(!name || !phone || !city || !district) {
+                alert('Fadlan wada buuxi dhammaan macluumaadka.');
+                return;
+            }
+
+            bookingState.name = name;
+            bookingState.phone = phone;
+            bookingState.city = city;
+            bookingState.district = district;
+
+            fetchAvailableSlots();
+        }
+
+        // --- Step 4: Number Grid (SUPABASE Appointments) ---
+        async function fetchAvailableSlots() {
+            showLoading('Checking live slot availability...');
+            try {
+                // Fetch already booked slots for this doctor on this date
+                const { data, error } = await supabase
+                    .from('appointments')
+                    .select('slot_number')
+                    .eq('doctor_id', bookingState.doctorId)
+                    .eq('appointment_date', bookingState.dateSelected);
+
+                if (error) throw error;
+
+                const bookedSlots = data.map(app => app.slot_number);
+                renderGrid(bookedSlots);
+                goToStep(4);
+            } catch(e) {
+                console.error(e);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderGrid(bookedSlots) {
+            const grid = document.getElementById('numberGrid');
+            grid.innerHTML = '';
+            bookingState.slotSelected = null;
+            document.getElementById('btn-to-summary').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-to-summary').disabled = true;
+
+            for(let i=1; i<=30; i++) {
+                if(bookedSlots.includes(i)) {
+                    grid.innerHTML += `<div class="slot slot-occupied">${i}</div>`;
+                } else {
+                    grid.innerHTML += `<div class="slot slot-available" onclick="selectSlot(${i}, this)">${i}</div>`;
+                }
+            }
+        }
+
+        function selectSlot(num, el) {
+            document.querySelectorAll('.slot-available').forEach(slot => slot.classList.remove('slot-selected'));
+            el.classList.add('slot-selected');
+            bookingState.slotSelected = num;
+
+            const btn = document.getElementById('btn-to-summary');
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.disabled = false;
+            
+            // Calculate Smart Arrival Time
+            let timeParts = bookingState.doctorStartTime.split(':');
+            let hours = parseInt(timeParts[0], 10);
+            let minutes = parseInt(timeParts[1], 10) || 0;
+            let totalMinutes = hours * 60 + minutes + ((num - 1) * bookingState.doctorSlotDuration);
+            
+            let estH = Math.floor(totalMinutes / 60) % 24;
+            let estM = totalMinutes % 60;
+            let ampm = estH >= 12 ? 'PM' : 'AM';
+            let formattedH = estH % 12 || 12;
+            let formattedTime = `${formattedH}:${estM.toString().padStart(2, '0')} ${ampm}`;
+            
+            let priorMinutes = totalMinutes - 10;
+            let priorH = Math.floor(priorMinutes / 60) % 24;
+            let priorM = priorMinutes % 60;
+            let priorAmpm = priorH >= 12 ? 'PM' : 'AM';
+            let priorFormattedH = priorH % 12 || 12;
+            let priorFormattedTime = `${priorFormattedH}:${priorM.toString().padStart(2, '0')} ${priorAmpm}`;
+            
+            bookingState.estimatedTimeStr = formattedTime;
+
+            // Populate summary dynamically while we wait
+            document.getElementById('sumName').innerText = bookingState.name;
+            document.getElementById('sumDoc').innerText = bookingState.doctorName;
+            document.getElementById('sumDate').innerText = bookingState.dateSelected;
+            document.getElementById('sumNum').innerText = bookingState.slotSelected;
+            
+            document.getElementById('sumWarningText').innerText = `Nambarkaaga waa [${num}]. Saacaddaada waa [${formattedTime}]. Fadlan xarunta joog 10 daqiiqo ka hor (${priorFormattedTime}).`;
+            document.getElementById('arrivalWarning').classList.remove('hidden');
+        }
+
+        // --- Step 5: Submit Booking (Initial Record Creation) ---
+        async function submitBooking() {
+            showLoading('Saving your booking details...');
+            try {
+                // Create Appointment in 'pending' status without payment details yet
+                const { data, error } = await supabase
+                    .from('appointments')
+                    .insert([
+                        {
+                            doctor_id: bookingState.doctorId,
+                            patient_name: bookingState.name,
+                            phone: bookingState.phone,
+                            city: bookingState.city,
+                            district: bookingState.district,
+                            appointment_date: bookingState.dateSelected,
+                            slot_number: bookingState.slotSelected,
+                            status: 'pending'
+                        }
+                    ])
+                    .select();
+                    
+                if (error) throw error;
+                
+                bookingState.appointmentId = data[0].id;
+                
+                // Transition to Step 6: Payment
+                goToStep(6);
+
+            } catch(e) {
+                console.error(e);
+                if (e.code === '23505') {
+                    alert('Qof kale ayaa qaatay lambarkan intaad buuxinaysay. Fadlan dooro mid kale!');
+                    fetchAvailableSlots();
+                } else {
+                    alert('Error: ' + e.message);
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // --- Step 6: Payment Logic ---
+        async function processPayment() {
+            const senderPhone = document.getElementById('senderPhone').value.trim();
+            if(!senderPhone) {
+                alert('Fadlan geli lambarka aad lacagta ka soo dirayso.');
+                return;
+            }
+
+            if(!bookingState.appointmentId) {
+                alert('Booking ID missing. Please try again.');
+                return;
+            }
+
+            showLoading('Starting 10-minute payment window...');
+            try {
+                const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+                
+                // Update appointment using RPC (secure update)
+                const { error } = await supabase.rpc('initialize_payment', { 
+                    app_id: bookingState.appointmentId, 
+                    p_phone: senderPhone 
+                });
+                    
+                if (error) throw error;
+                
+                // Persistence for refresh
+                localStorage.setItem('payment_session', JSON.stringify({
+                    id: bookingState.appointmentId,
+                    expiresAt: expiresAt,
+                    phone: senderPhone
+                }));
+                
+                // Transition to Pending View
+                document.getElementById('payment-form').classList.add('hidden');
+                document.getElementById('payment-pending-view').classList.remove('hidden');
+                document.getElementById('display-sender-phone').innerText = senderPhone;
+                
+                // Start Timer & Realtime Listener
+                startPaymentTimer(10);
+                subscribeToPaymentStatus(bookingState.appointmentId);
+
+            } catch(e) {
+                console.error(e);
+                alert('Error: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function startPaymentTimer(minutes, totalSecondsOverride = null) {
+            let seconds = totalSecondsOverride !== null ? totalSecondsOverride : minutes * 60;
+            const display = document.getElementById('timer-display');
+            
+            if(bookingState.timerInterval) clearInterval(bookingState.timerInterval);
+            
+            bookingState.timerInterval = setInterval(() => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                display.innerText = `${m}:${s.toString().padStart(2, '0')}`;
+                
+                if (seconds <= 0) {
+                    clearInterval(bookingState.timerInterval);
+                    handlePaymentExpiry();
+                }
+                seconds--;
+            }, 1000);
+        }
+
+        async function handlePaymentExpiry() {
+            if(!bookingState.appointmentId) return;
+            
+            // Update status to 'expired' in DB
+            await supabase
+                .from('appointments')
+                .update({ status: 'expired' })
+                .eq('id', bookingState.appointmentId);
+            
+            localStorage.removeItem('payment_session'); // Clear session
+            alert('Waqtiga bixinta lacagta waa uu dhamaaday. Fadlan dib u bilow.');
+            window.location.reload();
+        }
+
+        function subscribeToPaymentStatus(id) {
+            console.log("Subscribing to realtime updates for ID:", id);
+            supabase
+                .channel(`payment-${id}`)
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'appointments',
+                    filter: `id=eq.${id}`
+                }, payload => {
+                    console.log('Realtime Status Update:', payload.new.status);
+                    if (payload.new.status === 'verified') {
+                        if(bookingState.timerInterval) clearInterval(bookingState.timerInterval);
+                        localStorage.removeItem('payment_session'); // Clear session on success
+                        bookingState.isBookingStarted = false; // Clear exit guard
+                        goToStep(7); // Success
+                    }
+                })
+                .subscribe();
+        }
+
+    </script>
+</body>
+</html>
