@@ -7,21 +7,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Tani waxay meesha ka saaraysaa digniinta Node 20
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: 🏗 Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Waxaan u beddelnay v4
 
       - name: 🏗 Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # Waxaan u beddelnay v4
         with:
-          node-version: 18
+          node-version: 24 # Hadda waxaan isticmaalaynaa Node 24
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          eas-cache: false
+          eas-cache: false # Xalka dhabta ah ee Yarn Error
 
       - name: 📦 Install dependencies
         run: |
