@@ -555,7 +555,7 @@
                 // Find the next verified appointment slot
                 const { data: nextAppt, error: findErr } = await supabase
                     .from('appointments')
-                    .select('slot_number')
+                    .select('id, slot_number')
                     .eq('status', 'verified')
                     .eq('appointment_date', todayDate)
                     .gt('slot_number', currentQueueNumber)
@@ -575,6 +575,14 @@
                 }
 
                 const nextNum = nextAppt.slot_number;
+
+                // Update the appointment status to 'Calling' - This triggers the Display Overlay
+                const { error: callErr } = await supabase
+                    .from('appointments')
+                    .update({ status: 'Calling' })
+                    .eq('id', nextAppt.id);
+
+                if (callErr) throw callErr;
                 
                 // Update the live status
                 const { error: updateErr } = await supabase

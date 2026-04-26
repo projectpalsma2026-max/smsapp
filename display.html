@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Queue Display | HealthFirst Hospital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --emerald: #10b981;
+            --slate: #334155;
+            --dark-bg: #0f172a;
+            --white: #ffffff;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--white);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Section (Serving Now) */
+        header {
+            flex: 3;
+            background-color: var(--emerald);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .label {
+            font-size: 3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        #current-ticket-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #current-ticket {
+            font-size: 35rem;
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 20px 80px rgba(0,0,0,0.3);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Footer Section (Next Up) */
+        footer {
+            flex: 1;
+            background-color: var(--slate);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10%;
+            border-top: 4px solid rgba(255,255,255,0.05);
+        }
+
+        .next-label {
+            font-size: 3.5rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        #next-ticket {
+            font-size: 10rem;
+            font-weight: 800;
+            color: var(--white);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Overlay */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+
+        #overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .overlay-text {
+            font-size: 5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: var(--emerald);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            animation: fadeInDown 0.8s ease backwards;
+        }
+
+        #calling-ticket {
+            font-size: 45rem; /* Massive for the call-in */
+            font-weight: 950;
+            color: var(--white);
+            line-height: 1;
+            margin: 0;
+            text-shadow: 0 0 100px rgba(16, 185, 129, 0.4);
+        }
+
+        .room-text {
+            font-size: 6rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-top: 1rem;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 1rem 4rem;
+            border-radius: 100px;
+            border: 2px solid var(--emerald);
+            animation: fadeInUp 0.8s ease 0.2s backwards;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scaleDownAndSlide {
+            0% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0.7) translateY(-30vh); /* Scale down and move towards header */
+                opacity: 0;
+            }
+        }
+
+        .calling-animation {
+            animation: scaleDownAndSlide 1.2s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+        }
+
+        /* Clock / Time Styling */
+        #clock {
+            position: absolute;
+            top: 2rem;
+            right: 4rem;
+            font-size: 2.5rem;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        #hospital-name {
+            position: absolute;
+            top: 2rem;
+            left: 4rem;
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div id="hospital-name">HEALTHFIRST MEDICAL</div>
+        <div id="clock">00:00:00</div>
+        <div class="label">Serving Now</div>
+        <div id="current-ticket-container">
+            <div id="current-ticket">00</div>
+        </div>
+    </header>
+
+    <footer>
+        <div class="next-label">Next Up</div>
+        <div id="next-ticket">--</div>
+    </footer>
+
+    <!-- Call-In Overlay -->
+    <div id="overlay">
+        <div class="overlay-text">PLEASE PROCEED TO ROOM 1</div>
+        <div id="calling-ticket">00</div>
+        <div class="room-text">TICKET <span id="calling-number-label">00</span></div>
+    </div>
+
+    <audio id="chime" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const currentTicketEl = document.getElementById('current-ticket');
+        const nextTicketEl = document.getElementById('next-ticket');
+        const callingTicketEl = document.getElementById('calling-ticket');
+        const callingNumberLabel = document.getElementById('calling-number-label');
+        const overlay = document.getElementById('overlay');
+        const chime = document.getElementById('chime');
+        const clockEl = document.getElementById('clock');
+
+        let isAnimating = false;
+
+        // --- Clock Logic ---
+        function updateClock() {
+            const now = new Date();
+            clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- Initialization ---
+        async function fetchInitialState() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Get Current (the most recent 'Calling' or 'Served' or 'Active')
+            // For now, let's look at clinic_status for the current one, 
+            // or the latest 'Calling' appointment.
+            const { data: statusData } = await supabase
+                .from('clinic_status')
+                .select('current_number')
+                .eq('doctor_id', 'global')
+                .single();
+            
+            if (statusData) {
+                currentTicketEl.innerText = String(statusData.current_number).padStart(2, '0');
+            }
+
+            fetchNextTicket(statusData ? statusData.current_number : 0);
+        }
+
+        async function fetchNextTicket(currentNum) {
+            const today = new Date().toISOString().split('T')[0];
+            const { data: nextData } = await supabase
+                .from('appointments')
+                .select('slot_number')
+                .eq('status', 'verified')
+                .eq('appointment_date', today)
+                .gt('slot_number', currentNum)
+                .order('slot_number', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (nextData) {
+                nextTicketEl.innerText = String(nextData.slot_number).padStart(2, '0');
+            } else {
+                nextTicketEl.innerText = '--';
+            }
+        }
+
+        // --- Call-In Sequence ---
+        async function callNextPatient(ticketNumber) {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            // 1. Sound
+            chime.play().catch(e => console.error("Audio failed:", e));
+
+            // 2. Prepare Overlay
+            callingTicketEl.innerText = String(ticketNumber).padStart(2, '0');
+            callingNumberLabel.innerText = String(ticketNumber).padStart(2, '0');
+            overlay.classList.add('active');
+
+            // 3. Wait 15 seconds
+            setTimeout(() => {
+                triggerTransition(ticketNumber);
+            }, 15000);
+        }
+
+        function triggerTransition(ticketNumber) {
+            // Add animation class to the ticket in overlay
+            callingTicketEl.classList.add('calling-animation');
+
+            setTimeout(() => {
+                // 4. Update Main Screen
+                currentTicketEl.innerText = String(ticketNumber).padStart(2, '0');
+                
+                // 5. Cleanup Overlay
+                overlay.classList.remove('active');
+                callingTicketEl.classList.remove('calling-animation');
+                
+                // 6. Fetch Next Ticket
+                fetchNextTicket(ticketNumber);
+                
+                isAnimating = false;
+            }, 1000); // Animation duration
+        }
+
+        // --- Realtime Listener ---
+        function initRealtime() {
+            supabase
+                .channel('queue_changes')
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'appointments' 
+                }, payload => {
+                    const { new: newRow, old: oldRow } = payload;
+                    
+                    // Trigger if status changed to 'Calling'
+                    if (newRow.status === 'Calling' && oldRow.status !== 'Calling') {
+                        callNextPatient(newRow.slot_number);
+                    }
+                })
+                .subscribe();
+        }
+
+        // --- Entry Point ---
+        fetchInitialState();
+        initRealtime();
+
+        // Interaction listener to allow audio play
+        document.body.addEventListener('click', () => {
+            console.log("Audio enabled");
+        }, { once: true });
+
+    </script>
+</body>
+</html>
