@@ -94,48 +94,52 @@
 
         /* Left Panel: Big Now Serving */
         .serving-panel {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 3rem;
+            background: linear-gradient(135deg, var(--glass), rgba(16, 185, 129, 0.05));
+            border: 2px solid var(--glass-border);
+            border-radius: 4rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
             overflow: hidden;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.2);
         }
 
         .panel-header {
             position: absolute;
-            top: 4rem;
-            font-size: 2.5rem;
-            font-weight: 600;
+            top: 5rem;
+            font-size: 3rem;
+            font-weight: 700;
             color: var(--emerald);
             text-transform: uppercase;
-            letter-spacing: 0.5em;
+            letter-spacing: 0.6em;
+            opacity: 0.8;
         }
 
         .big-ticket {
-            font-size: 38rem;
-            font-weight: 900;
-            line-height: 0.8;
+            font-size: 42rem;
+            font-weight: 950;
+            line-height: 0.7;
             color: #fff;
-            text-shadow: 0 20px 100px rgba(0,0,0,0.5);
-            margin-top: 2rem;
+            text-shadow: 0 30px 120px rgba(0,0,0,0.6);
+            margin-top: 4rem;
+            letter-spacing: -0.05em;
         }
 
         .panel-footer {
             position: absolute;
-            bottom: 4rem;
-            font-size: 4rem;
-            font-weight: 700;
+            bottom: 5rem;
+            font-size: 4.5rem;
+            font-weight: 800;
             color: var(--white);
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            background: rgba(16, 185, 129, 0.15);
-            padding: 1rem 3rem;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 1.5rem 5rem;
             border-radius: 100px;
-            border: 2px solid var(--emerald);
+            border: 3px solid var(--emerald);
+            box-shadow: 0 0 40px var(--emerald-glow);
         }
 
         /* Right Panel: Doctor List */
@@ -360,16 +364,21 @@
             supabase
                 .channel('display_sync')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
-                    const { new: row, old: oldRow } = payload;
-                    if (row.status === 'Calling' && oldRow.status !== 'Calling' && row.id !== lastCalledId) {
-                        lastCalledId = row.id;
-                        triggerAlert(row.slot_number, row.doctor_id);
+                    console.log("Realtime Update Received:", payload);
+                    const newRow = payload.new;
+                    
+                    if (newRow.status === 'Calling' && newRow.id !== lastCalledId) {
+                        console.log("Triggering Alert for ticket:", newRow.slot_number);
+                        lastCalledId = newRow.id;
+                        triggerAlert(newRow.slot_number, newRow.doctor_id);
                     } else {
                         refreshState();
                     }
                 })
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, () => refreshState())
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Supabase Realtime Status:', status);
+                });
         }
 
         initDisplay();

@@ -25,14 +25,15 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📦 Install dependencies
+      - name: 📦 Force Clean Dependencies
         run: |
           cd sms-gateway
-          # Halkii aan ka isticmaali lahayn 'npm ci', waxaan isticmaalaynaa 'install'
+          # Halkan waxaan ku tirtiraynaa lock-faylka si mishiinka GitHub uusan 'npm ci' u isticmaalin
+          rm -f package-lock.json
           npm install --legacy-peer-deps
 
-      - name: 🚀 Build APK (Force Build)
+      - name: 🚀 Build APK
         run: |
           cd sms-gateway
-          # Waxaan amraynaa inuu iska indho-tiro 'npm ci' oo uu koodhka hadda jira dhismahiisa bilaabo
+          # Waxaan dhismaha ku bilaabaynaa 'local' si uu u isticmaalo node_modules-ka aan hadda rakibnay
           eas build --platform android --profile development --local --non-interactive --clear-cache
