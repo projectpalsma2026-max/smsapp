@@ -313,26 +313,7 @@
         <i class="fas fa-check-circle text-green-400"></i> Copied!
     </div>
 
-    <!-- Incoming Alert Overlay -->
-    <div id="queue-alert"
-        class="fixed inset-0 z-[2000] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-500 scale-90">
-        <div class="absolute inset-0 bg-blue-600/20 backdrop-blur-md"></div>
-        <div
-            class="relative glass rounded-[3rem] p-12 text-center shadow-2xl border-4 border-white/50 animate-float max-w-lg w-full mx-4">
-            <div
-                class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-med-blue text-5xl mx-auto mb-6 shadow-lg">
-                <i class="fas fa-bullhorn animate-bounce"></i>
-            </div>
-            <h2 class="text-3xl font-black text-gray-800 mb-2 uppercase tracking-tighter">New Patient Called</h2>
-            <div class="text-[120px] font-black text-med-blue leading-none mb-4" id="alert-number">--</div>
-            <p class="text-xl font-bold text-gray-600">PLEASE ENTER THE CLINIC</p>
-            <div class="mt-8 flex justify-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping"></div>
-                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping" style="animation-delay: 0.2s"></div>
-                <div class="w-2 h-2 rounded-full bg-med-blue animate-ping" style="animation-delay: 0.4s"></div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Background Blobs -->
     <div class="blob bg-blue-300 w-96 h-96 rounded-full top-0 left-0 animate-float-slow"></div>
@@ -1198,12 +1179,8 @@
             liveCurrentNumber = newNum;
             
             // Only show alert if the number actually increased (new patient called)
-            if (liveCurrentNumber > oldNum && liveCurrentNumber > 0) {
-                showAlert(liveCurrentNumber);
-                // Also play a subtle alert sound for the patient if possible
-                const ding = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                ding.play().catch(() => {});
-            }
+            // Alert removed from index to keep it clean (as per request)
+            // It will now only appear on the main TV Display screen.
             updateLiveUI();
         }
 
@@ -1230,19 +1207,7 @@
             }
         }
 
-        function showAlert(num) {
-            const overlay = document.getElementById('queue-alert');
-            const numEl = document.getElementById('alert-number');
-            numEl.innerText = num;
 
-            overlay.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
-            overlay.classList.add('opacity-100', 'scale-100');
-
-            setTimeout(() => {
-                overlay.classList.remove('opacity-100', 'scale-100');
-                overlay.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
-            }, 15000);
-        }
 
         // Update checkStatus to set userTrackedNumber
         // We override the global function to inject our real-time logic

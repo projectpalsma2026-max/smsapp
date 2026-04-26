@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Queue Display | HealthFirst Hospital</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <title>Multi-Doctor Queue Display | HealthFirst Hospital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --emerald: #10b981;
-            --slate: #334155;
-            --dark-bg: #0f172a;
+            --emerald-glow: rgba(16, 185, 129, 0.4);
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-400: #94a3b8;
             --white: #ffffff;
-            --text-muted: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
 
         * {
@@ -23,332 +27,354 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: var(--dark-bg);
+            background-color: var(--slate-900);
             color: var(--white);
             height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(0, 123, 255, 0.05) 0%, transparent 40%);
         }
 
-        /* Header Section (Serving Now) */
-        header {
-            flex: 3;
-            background-color: var(--emerald);
+        /* Top Bar */
+        .top-bar {
+            height: 8vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .brand-logo {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: linear-gradient(135deg, var(--emerald), #34d399);
+            border-radius: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 0 30px var(--emerald-glow);
+        }
+
+        .brand-name {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .clock-container { text-align: right; }
+        #clock { font-size: 2.5rem; font-weight: 700; }
+        #date { font-size: 1rem; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
+
+        /* Layout Grid */
+        .main-workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 2rem;
+            padding: 2rem 3rem;
+            overflow: hidden;
+        }
+
+        /* Left Panel: Big Now Serving */
+        .serving-panel {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 3rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
-            z-index: 10;
+            overflow: hidden;
         }
 
-        .label {
-            font-size: 3rem;
+        .panel-header {
+            position: absolute;
+            top: 4rem;
+            font-size: 2.5rem;
             font-weight: 600;
+            color: var(--emerald);
             text-transform: uppercase;
-            letter-spacing: 0.2em;
-            opacity: 0.9;
-            margin-bottom: 2rem;
+            letter-spacing: 0.5em;
         }
 
-        #current-ticket-container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #current-ticket {
-            font-size: 35rem;
+        .big-ticket {
+            font-size: 38rem;
             font-weight: 900;
-            line-height: 1;
-            text-shadow: 0 20px 80px rgba(0,0,0,0.3);
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            line-height: 0.8;
+            color: #fff;
+            text-shadow: 0 20px 100px rgba(0,0,0,0.5);
+            margin-top: 2rem;
         }
 
-        /* Footer Section (Next Up) */
-        footer {
-            flex: 1;
-            background-color: var(--slate);
+        .panel-footer {
+            position: absolute;
+            bottom: 4rem;
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--white);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: rgba(16, 185, 129, 0.15);
+            padding: 1rem 3rem;
+            border-radius: 100px;
+            border: 2px solid var(--emerald);
+        }
+
+        /* Right Panel: Doctor List */
+        .doctor-list-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .doctor-list-panel::-webkit-scrollbar { width: 6px; }
+        .doctor-list-panel::-webkit-scrollbar-thumb { background: var(--slate-700); border-radius: 10px; }
+
+        .doctor-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 1.5rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 10%;
-            border-top: 4px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
         }
 
-        .next-label {
-            font-size: 3.5rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
+        .doctor-card.active-card {
+            border-color: var(--emerald);
+            background: rgba(16, 185, 129, 0.05);
         }
 
-        #next-ticket {
-            font-size: 10rem;
-            font-weight: 800;
-            color: var(--white);
-            font-variant-numeric: tabular-nums;
+        .doc-info { display: flex; align-items: center; gap: 1.5rem; }
+        .doc-img { width: 5rem; height: 5rem; border-radius: 1.2rem; object-fit: cover; border: 2px solid var(--slate-700); }
+        .doc-name { font-size: 1.6rem; font-weight: 700; color: #fff; }
+        .doc-spec { font-size: 1rem; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+
+        .doc-ticket {
+            text-align: center;
+            background: var(--slate-800);
+            padding: 0.8rem 1.5rem;
+            border-radius: 1.5rem;
+            min-width: 8rem;
         }
+        .doc-ticket-label { font-size: 0.8rem; color: var(--slate-400); text-transform: uppercase; margin-bottom: 0.2rem; }
+        .doc-ticket-num { font-size: 2.5rem; font-weight: 800; color: var(--emerald); line-height: 1; }
 
         /* Overlay */
         #overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.6s ease, visibility 0.6s;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        #overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+        #overlay.active { opacity: 1; visibility: visible; }
+        .overlay-title { font-size: 4rem; font-weight: 700; color: var(--emerald); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem; }
+        .overlay-ticket { font-size: 45rem; font-weight: 950; line-height: 0.8; color: #fff; text-shadow: 0 0 80px var(--emerald-glow); }
+        .overlay-desc { font-size: 6rem; font-weight: 800; color: #fff; margin-top: 2rem; background: rgba(255,255,255,0.05); padding: 1rem 4rem; border-radius: 100px; border: 2px solid var(--emerald); text-align: center; }
+        .overlay-doc { font-size: 3rem; color: var(--slate-400); margin-top: 1rem; font-weight: 500; }
 
-        .overlay-text {
-            font-size: 5rem;
-            font-weight: 700;
-            margin-bottom: 2rem;
-            text-align: center;
-            color: var(--emerald);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            animation: fadeInDown 0.8s ease backwards;
+        @keyframes zoomOutSlide {
+            0% { transform: scale(1) translateY(0); opacity: 1; }
+            100% { transform: scale(0.6) translateY(-40vh); opacity: 0; }
         }
-
-        #calling-ticket {
-            font-size: 45rem; /* Massive for the call-in */
-            font-weight: 950;
-            color: var(--white);
-            line-height: 1;
-            margin: 0;
-            text-shadow: 0 0 100px rgba(16, 185, 129, 0.4);
-        }
-
-        .room-text {
-            font-size: 6rem;
-            font-weight: 800;
-            color: var(--white);
-            margin-top: 1rem;
-            background: rgba(16, 185, 129, 0.2);
-            padding: 1rem 4rem;
-            border-radius: 100px;
-            border: 2px solid var(--emerald);
-            animation: fadeInUp 0.8s ease 0.2s backwards;
-        }
-
-        /* Animations */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-50px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(50px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes scaleDownAndSlide {
-            0% {
-                transform: scale(1) translateY(0);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(0.7) translateY(-30vh); /* Scale down and move towards header */
-                opacity: 0;
-            }
-        }
-
-        .calling-animation {
-            animation: scaleDownAndSlide 1.2s cubic-bezier(0.45, 0, 0.55, 1) forwards;
-        }
-
-        /* Clock / Time Styling */
-        #clock {
-            position: absolute;
-            top: 2rem;
-            right: 4rem;
-            font-size: 2.5rem;
-            font-weight: 500;
-            opacity: 0.8;
-        }
-
-        #hospital-name {
-            position: absolute;
-            top: 2rem;
-            left: 4rem;
-            font-size: 2.5rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
+        .animate-call-out { animation: zoomOutSlide 1.2s cubic-bezier(0.64, 0, 0.78, 0) forwards; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div id="hospital-name">HEALTHFIRST MEDICAL</div>
-        <div id="clock">00:00:00</div>
-        <div class="label">Serving Now</div>
-        <div id="current-ticket-container">
-            <div id="current-ticket">00</div>
+    <div class="top-bar">
+        <div class="brand">
+            <div class="brand-logo">H</div>
+            <div class="brand-name">HEALTHFIRST HOSPITAL</div>
         </div>
-    </header>
+        <div class="clock-container">
+            <div id="clock">00:00:00</div>
+            <div id="date">MONDAY, JANUARY 1</div>
+        </div>
+    </div>
 
-    <footer>
-        <div class="next-label">Next Up</div>
-        <div id="next-ticket">--</div>
-    </footer>
+    <div class="main-workspace">
+        <!-- Main Stage -->
+        <div class="serving-panel">
+            <div class="panel-header">Now Serving</div>
+            <div class="big-ticket" id="main-ticket">00</div>
+            <div class="panel-footer" id="main-room">PLEASE PROCEED</div>
+        </div>
+
+        <!-- Doctor Grid -->
+        <div class="doctor-list-panel" id="doctor-list">
+            <!-- Populated dynamically -->
+            <div class="info-label" style="font-size: 1.2rem; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Clinical Station Status</div>
+        </div>
+    </div>
 
     <!-- Call-In Overlay -->
     <div id="overlay">
-        <div class="overlay-text">PLEASE PROCEED TO ROOM 1</div>
-        <div id="calling-ticket">00</div>
-        <div class="room-text">TICKET <span id="calling-number-label">00</span></div>
+        <div class="overlay-title">Now Calling</div>
+        <div class="overlay-ticket" id="ov-ticket">00</div>
+        <div class="overlay-desc" id="ov-doc">DR. NAME</div>
+        <div class="overlay-doc">PLEASE PROCEED TO CONSULTATION</div>
     </div>
 
     <audio id="chime" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
     <script>
-        // Supabase Configuration
         const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const currentTicketEl = document.getElementById('current-ticket');
-        const nextTicketEl = document.getElementById('next-ticket');
-        const callingTicketEl = document.getElementById('calling-ticket');
-        const callingNumberLabel = document.getElementById('calling-number-label');
+        const mainTicketEl = document.getElementById('main-ticket');
+        const mainRoomEl = document.getElementById('main-room');
+        const ovTicketEl = document.getElementById('ov-ticket');
+        const ovDocEl = document.getElementById('ov-doc');
         const overlay = document.getElementById('overlay');
+        const doctorListEl = document.getElementById('doctor-list');
         const chime = document.getElementById('chime');
-        const clockEl = document.getElementById('clock');
 
         let isAnimating = false;
+        let lastCalledId = null;
+        let doctorsCache = {};
 
-        // --- Clock Logic ---
-        function updateClock() {
+        // --- Clock ---
+        function updateTime() {
             const now = new Date();
-            clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         }
-        setInterval(updateClock, 1000);
-        updateClock();
+        setInterval(updateTime, 1000); updateTime();
 
-        // --- Initialization ---
-        async function fetchInitialState() {
-            const today = new Date().toISOString().split('T')[0];
+        // --- Data ---
+        async function initDisplay() {
+            // 1. Fetch Doctors
+            const { data: docs } = await supabase.from('doctors').select('*').order('id');
+            doctorsCache = {};
+            docs.forEach(d => doctorsCache[d.id] = d);
             
-            // Get Current (the most recent 'Calling' or 'Served' or 'Active')
-            // For now, let's look at clinic_status for the current one, 
-            // or the latest 'Calling' appointment.
-            const { data: statusData } = await supabase
-                .from('clinic_status')
-                .select('current_number')
-                .eq('doctor_id', 'global')
-                .single();
-            
-            if (statusData) {
-                currentTicketEl.innerText = String(statusData.current_number).padStart(2, '0');
-            }
-
-            fetchNextTicket(statusData ? statusData.current_number : 0);
+            await refreshState();
         }
 
-        async function fetchNextTicket(currentNum) {
+        async function refreshState() {
             const today = new Date().toISOString().split('T')[0];
-            const { data: nextData } = await supabase
+            
+            // 1. Get Global Status
+            const { data: statusData } = await supabase.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
+            const currentNum = statusData ? statusData.current_number : 0;
+            mainTicketEl.innerText = String(currentNum).padStart(2, '0');
+
+            // 2. Fetch Latest 'Calling' or 'Served' for each doctor to show their "current"
+            const { data: appts } = await supabase
                 .from('appointments')
-                .select('slot_number')
-                .eq('status', 'verified')
+                .select('doctor_id, slot_number, status')
                 .eq('appointment_date', today)
-                .gt('slot_number', currentNum)
-                .order('slot_number', { ascending: true })
-                .limit(1)
-                .maybeSingle();
+                .in('status', ['Calling', 'Served', 'Active'])
+                .order('slot_number', { ascending: false });
 
-            if (nextData) {
-                nextTicketEl.innerText = String(nextData.slot_number).padStart(2, '0');
-            } else {
-                nextTicketEl.innerText = '--';
-            }
+            // Group by doctor
+            const docStatus = {};
+            appts.forEach(a => {
+                if (!docStatus[a.doctor_id]) docStatus[a.doctor_id] = a.slot_number;
+            });
+
+            // 3. Render Doctor List
+            renderDoctorList(docStatus);
         }
 
-        // --- Call-In Sequence ---
-        async function callNextPatient(ticketNumber) {
+        function renderDoctorList(docStatus) {
+            const header = `<div class="info-label" style="font-size: 1.2rem; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1rem;">Station Status</div>`;
+            doctorListEl.innerHTML = header;
+
+            Object.values(doctorsCache).forEach(doc => {
+                const currentVal = docStatus[doc.id] || '--';
+                const isActive = currentVal !== '--';
+                
+                doctorListEl.innerHTML += `
+                    <div class="doctor-card ${isActive ? 'active-card' : ''}">
+                        <div class="doc-info">
+                            <img src="${doc.image_url}" class="doc-img">
+                            <div>
+                                <div class="doc-name">${doc.name}</div>
+                                <div class="doc-spec">${doc.specialty}</div>
+                            </div>
+                        </div>
+                        <div class="doc-ticket">
+                            <div class="doc-ticket-label">Current</div>
+                            <div class="doc-ticket-num">${String(currentVal).padStart(2, '0')}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- Sequence ---
+        async function triggerAlert(ticket, doctorId) {
             if (isAnimating) return;
             isAnimating = true;
 
-            // 1. Sound
-            chime.play().catch(e => console.error("Audio failed:", e));
-
-            // 2. Prepare Overlay
-            callingTicketEl.innerText = String(ticketNumber).padStart(2, '0');
-            callingNumberLabel.innerText = String(ticketNumber).padStart(2, '0');
+            const doc = doctorsCache[doctorId] || { name: 'MEDICAL STAFF' };
+            
+            ovTicketEl.innerText = String(ticket).padStart(2, '0');
+            ovDocEl.innerText = doc.name.toUpperCase();
+            
+            chime.play().catch(e => console.warn(e));
             overlay.classList.add('active');
 
-            // 3. Wait 15 seconds
             setTimeout(() => {
-                triggerTransition(ticketNumber);
+                ovTicketEl.classList.add('animate-call-out');
+                setTimeout(() => {
+                    mainTicketEl.innerText = String(ticket).padStart(2, '0');
+                    mainRoomEl.innerText = `PROCEED TO ${doc.name.toUpperCase()}`;
+                    overlay.classList.remove('active');
+                    ovTicketEl.classList.remove('animate-call-out');
+                    refreshState();
+                    isAnimating = false;
+                }, 1200);
             }, 15000);
         }
 
-        function triggerTransition(ticketNumber) {
-            // Add animation class to the ticket in overlay
-            callingTicketEl.classList.add('calling-animation');
-
-            setTimeout(() => {
-                // 4. Update Main Screen
-                currentTicketEl.innerText = String(ticketNumber).padStart(2, '0');
-                
-                // 5. Cleanup Overlay
-                overlay.classList.remove('active');
-                callingTicketEl.classList.remove('calling-animation');
-                
-                // 6. Fetch Next Ticket
-                fetchNextTicket(ticketNumber);
-                
-                isAnimating = false;
-            }, 1000); // Animation duration
-        }
-
-        // --- Realtime Listener ---
+        // --- Realtime ---
         function initRealtime() {
             supabase
-                .channel('queue_changes')
-                .on('postgres_changes', { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'appointments' 
-                }, payload => {
-                    const { new: newRow, old: oldRow } = payload;
-                    
-                    // Trigger if status changed to 'Calling'
-                    if (newRow.status === 'Calling' && oldRow.status !== 'Calling') {
-                        callNextPatient(newRow.slot_number);
+                .channel('display_sync')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
+                    const { new: row, old: oldRow } = payload;
+                    if (row.status === 'Calling' && oldRow.status !== 'Calling' && row.id !== lastCalledId) {
+                        lastCalledId = row.id;
+                        triggerAlert(row.slot_number, row.doctor_id);
+                    } else {
+                        refreshState();
                     }
                 })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, () => refreshState())
                 .subscribe();
         }
 
-        // --- Entry Point ---
-        fetchInitialState();
+        initDisplay();
         initRealtime();
-
-        // Interaction listener to allow audio play
-        document.body.addEventListener('click', () => {
-            console.log("Audio enabled");
-        }, { once: true });
-
+        document.body.addEventListener('click', () => { chime.play().then(() => { chime.pause(); chime.currentTime = 0; }); }, { once: true });
     </script>
 </body>
 </html>

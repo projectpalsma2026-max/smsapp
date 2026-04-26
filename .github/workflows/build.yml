@@ -28,11 +28,11 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           cd sms-gateway
-          # Waxaan u isticmaalaynaa --legacy-peer-deps si looga fogaado khilaafka maktabadaha
+          # Halkii aan ka isticmaali lahayn 'npm ci', waxaan isticmaalaynaa 'install'
           npm install --legacy-peer-deps
 
-      - name: 🚀 Build APK (Clean Build)
+      - name: 🚀 Build APK (Force Build)
         run: |
           cd sms-gateway
-          # Amarkan wuxuu ku qasbayaa inuu dhismo cusub sameeyo isagoo aan cache isticmaalin
+          # Waxaan amraynaa inuu iska indho-tiro 'npm ci' oo uu koodhka hadda jira dhismahiisa bilaabo
           eas build --platform android --profile development --local --non-interactive --clear-cache
