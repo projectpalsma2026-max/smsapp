@@ -276,18 +276,22 @@
             // 1. Fetch Doctors
             const { data: docs } = await supabase.from('doctors').select('*').order('id');
             doctorsCache = {};
-            docs.forEach(d => doctorsCache[d.id] = d);
+            if (docs) docs.forEach(d => doctorsCache[d.id] = d);
             
-            await refreshState();
+            await refreshState(true);
         }
 
-        async function refreshState() {
+        async function refreshState(isInitialLoad = false) {
             const today = new Date().toISOString().split('T')[0];
             
             // 1. Get Global Status
             const { data: statusData } = await supabase.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
             const currentNum = statusData ? statusData.current_number : 0;
             mainTicketEl.innerText = String(currentNum).padStart(2, '0');
+
+            if (isInitialLoad) {
+                lastCalledNum = currentNum;
+            }
 
             // 2. Fetch Latest 'Calling' or 'Served' for each doctor to show their "current"
             const { data: appts } = await supabase
@@ -359,26 +363,57 @@
             }, 15000);
         }
 
-        // --- Realtime ---
+        // --- Realtime & Fallback ---
+        let lastCalledNum = 0;
+
+        async function checkForNewPatient(newNum) {
+            if (newNum > 0 && newNum !== lastCalledNum) {
+                lastCalledNum = newNum;
+                
+                // Fetch the appointment to get doctor_id
+                const today = new Date().toISOString().split('T')[0];
+                const { data: appt } = await supabase
+                    .from('appointments')
+                    .select('doctor_id')
+                    .eq('slot_number', newNum)
+                    .eq('appointment_date', today)
+                    .order('id', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                const docId = appt ? appt.doctor_id : null;
+                triggerAlert(newNum, docId);
+            }
+        }
+
         function initRealtime() {
+            // Listen to clinic_status as it's the most reliable source for 'Now Serving'
             supabase
                 .channel('display_sync')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
-                    console.log("Realtime Update Received:", payload);
-                    const newRow = payload.new;
-                    
-                    if (newRow.status === 'Calling' && newRow.id !== lastCalledId) {
-                        console.log("Triggering Alert for ticket:", newRow.slot_number);
-                        lastCalledId = newRow.id;
-                        triggerAlert(newRow.slot_number, newRow.doctor_id);
-                    } else {
-                        refreshState();
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clinic_status' }, payload => {
+                    if (payload.new.doctor_id === 'global') {
+                        checkForNewPatient(payload.new.current_number);
                     }
                 })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, () => refreshState())
                 .subscribe((status) => {
                     console.log('Supabase Realtime Status:', status);
                 });
+
+            // 10-Second Fallback Polling (Crucial if WebSockets fail)
+            setInterval(async () => {
+                const { data } = await supabase
+                    .from('clinic_status')
+                    .select('current_number')
+                    .eq('doctor_id', 'global')
+                    .maybeSingle();
+                
+                if (data && data.current_number !== lastCalledNum) {
+                    checkForNewPatient(data.current_number);
+                } else {
+                    // Also quietly refresh state
+                    refreshState();
+                }
+            }, 5000); // 5 seconds for faster TV response
         }
 
         initDisplay();
