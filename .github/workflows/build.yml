@@ -32,13 +32,13 @@ jobs:
           rm -f package-lock.json
           npm install --legacy-peer-deps
 
-      - name: 🚀 Build APK
-        run: |
-          cd sms-gateway
-          # Waxaan dhismaha ku bilaabaynaa 'local' si uu u isticmaalo node_modules-ka aan hadda rakibnay
-          eas build --platform android --profile development --local --non-interactive --clear-cache
-              - name: Upload APK
+          - name: 🚀 Build APK
+      run: |
+        cd sms-gateway
+        eas build --platform android --profile development --local --non-interactive --clear-cache
+
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-apk
-        path: android/app/build/outputs/apk/release/app-release.apk # Hubi in path-kan uu sax yahay
+        name: app-development-apk
+        path: sms-gateway/*.apk
