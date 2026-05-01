@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Doctor Queue Display | HealthFirst Hospital</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <title>Queue Display | HealthFirst Hospital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,13 +13,18 @@
             theme: {
                 extend: {
                     colors: {
-                        'med-blue': '#007BFF',
-                        'soft-teal': '#20c997',
-                        'slate-900': '#0f172a',
-                        'slate-800': '#1e293b',
+                        'brand-blue': '#0056b3',
+                        'brand-light-blue': '#007BFF',
+                        'brand-teal': '#20c997',
+                        'bg-soft': '#f3f8fc',
+                        'text-dark': '#1e293b',
                     },
                     fontFamily: {
                         sans: ['Outfit', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'premium': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'premium-hover': '0 20px 40px -10px rgba(0,123,255,0.15)',
                     }
                 }
             }
@@ -29,193 +32,114 @@
     </script>
     <style>
         body {
-            background-color: #0f172a;
-            color: #ffffff;
+            background-color: #f3f8fc;
+            color: #1e293b;
             height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            background-image:
-                radial-gradient(circle at 10% 10%, rgba(32, 201, 151, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 90%, rgba(0, 123, 255, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 1) 0%, #020617 100%);
-            background-attachment: fixed;
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23007BFF" fill-opacity="0.03"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
         }
 
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+            border-radius: 2rem;
         }
 
-        .glass-active {
-            background: linear-gradient(135deg, rgba(32, 201, 151, 0.1), rgba(0, 123, 255, 0.05));
-            border-color: rgba(32, 201, 151, 0.4);
-            box-shadow: 0 0 30px rgba(32, 201, 151, 0.15);
-        }
-
-        .big-ticket-text {
-            font-size: clamp(8rem, 20vw, 22rem);
+        .main-ticket-number {
+            font-size: clamp(8rem, 25vh, 25rem);
             line-height: 0.9;
-            font-weight: 900;
-            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
-            letter-spacing: -0.05em;
+            font-weight: 800;
+            color: #0056b3;
+            letter-spacing: -0.04em;
         }
 
-        .overlay-ticket-text {
-            font-size: clamp(10rem, 25vw, 28rem);
-            line-height: 0.9;
-            font-weight: 900;
-            background: linear-gradient(135deg, #ffffff 0%, #20c997 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 80px rgba(32, 201, 151, 0.5));
-        }
-
-        /* Overlay */
+        /* Smooth Overlay */
         #overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, #020617 100%);
-            backdrop-filter: blur(30px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(243, 248, 252, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; visibility: hidden;
+            transition: all 0.5s ease-in-out;
         }
 
-        #overlay.active {
-            opacity: 1;
-            visibility: visible;
+        #overlay.active { opacity: 1; visibility: visible; }
+        
+        @keyframes slideUpFade {
+            0% { transform: translateY(50px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
-
-        @keyframes zoomOutSlide {
-            0% {
-                transform: scale(1) translateY(0);
-                opacity: 1;
-                filter: blur(0px);
-            }
-
-            40% {
-                transform: scale(1.1) translateY(0);
-                opacity: 1;
-                filter: blur(0px);
-            }
-
-            100% {
-                transform: scale(0.5) translateY(-50vh);
-                opacity: 0;
-                filter: blur(20px);
-            }
-        }
-
-        .animate-call-out {
-            animation: zoomOutSlide 1.5s cubic-bezier(0.64, 0, 0.78, 0) forwards;
-        }
-
-        @keyframes pulse-glow {
-
-            0%,
-            100% {
-                box-shadow: 0 0 40px rgba(32, 201, 151, 0.2);
-            }
-
-            50% {
-                box-shadow: 0 0 80px rgba(32, 201, 151, 0.5);
-                border-color: rgba(32, 201, 151, 0.8);
-            }
-        }
-
-        .pulse-border {
-            animation: pulse-glow 3s infinite;
-        }
-
+        
+        .animate-in { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-
 <body class="antialiased">
 
-    <!-- Top Bar -->
-    <header class="h-[8vh] glass-panel border-b border-white/10 flex items-center justify-between px-10 z-50">
+    <!-- Header -->
+    <header class="h-[10vh] bg-white shadow-sm flex items-center justify-between px-10 z-50 relative">
         <div class="flex items-center gap-4">
-            <div
-                class="w-12 h-12 rounded-xl bg-gradient-to-tr from-med-blue to-soft-teal flex items-center justify-center text-white text-2xl shadow-[0_0_20px_rgba(32,201,151,0.4)]">
-                <i class="fa-solid fa-heart-pulse"></i>
+            <div class="w-14 h-14 rounded-2xl bg-brand-light-blue flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-plus"></i>
             </div>
-            <h1
-                class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 uppercase">
-                HealthFirst Hospital
-            </h1>
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-text-dark">HealthFirst</h1>
+                <p class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Medical Center</p>
+            </div>
         </div>
-        <div class="text-right flex flex-col items-end">
-            <div id="clock" class="text-4xl font-bold tracking-wider font-mono">00:00:00</div>
-            <div id="date" class="text-sm font-semibold text-soft-teal tracking-widest uppercase">MONDAY, JANUARY 1
+        <div class="text-right flex items-center gap-6">
+            <div class="text-right border-r border-gray-200 pr-6">
+                <div id="date" class="text-sm font-bold text-gray-500 uppercase tracking-wider">MONDAY, JANUARY 1</div>
+                <div class="text-brand-light-blue font-medium text-xs">Queue Live Sync</div>
             </div>
+            <div id="clock" class="text-5xl font-bold tracking-tight text-text-dark font-mono">00:00</div>
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="flex-1 p-8 flex gap-8 h-[92vh] overflow-hidden">
-
+    <!-- Content -->
+    <main class="flex-1 p-8 flex gap-8 h-[90vh] overflow-hidden max-w-[1920px] mx-auto w-full">
+        
         <!-- Left: Now Serving Big Display -->
-        <section
-            class="flex-[2] relative rounded-[3rem] glass-panel pulse-border flex flex-col items-center justify-center overflow-hidden group py-12">
-            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-soft-teal/5"></div>
-
-            <div class="text-soft-teal text-3xl md:text-5xl font-bold tracking-[0.5em] uppercase opacity-80 z-10 mb-6">
-                Now Serving
-            </div>
-
-            <div class="z-10 transition-transform duration-700 ease-out mb-8 flex-1 flex items-center"
-                id="main-ticket-container">
-                <div class="big-ticket-text" id="main-ticket">00</div>
-            </div>
-
-            <div class="z-10 w-3/4 flex justify-center mt-auto">
-                <div
-                    class="bg-slate-800/80 border-2 border-soft-teal/50 rounded-full py-5 px-8 text-center shadow-[0_0_40px_rgba(32,201,151,0.2)] backdrop-blur-md transition-all duration-500 w-full max-w-2xl">
-                    <span
-                        class="text-2xl md:text-4xl font-extrabold uppercase tracking-widest text-white block w-full whitespace-nowrap overflow-hidden text-ellipsis"
-                        id="main-room">
-                        PLEASE PROCEED
-                    </span>
+        <section class="flex-[1.5] glass-card flex flex-col items-center justify-center relative overflow-hidden">
+            <!-- Decorative circle -->
+            <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-60"></div>
+            
+            <div class="z-10 text-center w-full px-8">
+                <div class="inline-block px-6 py-2 bg-blue-50 text-brand-blue rounded-full text-xl font-bold tracking-widest uppercase mb-6 border border-blue-100 shadow-sm">
+                    Now Serving
+                </div>
+                
+                <div class="transition-transform duration-500 ease-out flex items-center justify-center" id="main-ticket-container">
+                    <div class="main-ticket-number drop-shadow-sm" id="main-ticket">00</div>
+                </div>
+                
+                <div class="mt-8 bg-brand-blue text-white rounded-2xl py-6 px-10 shadow-premium w-full mx-auto border-4 border-white">
+                    <p class="text-sm text-blue-200 uppercase font-bold tracking-widest mb-1">Please proceed to</p>
+                    <h2 class="text-4xl md:text-5xl font-extrabold uppercase tracking-wide truncate" id="main-room">
+                        WAITING AREA
+                    </h2>
                 </div>
             </div>
         </section>
 
         <!-- Right: Doctor Stations List -->
-        <aside class="flex-[1] flex flex-col gap-6">
-            <div class="flex items-center gap-3 px-2">
-                <div class="w-3 h-3 rounded-full bg-soft-teal animate-pulse"></div>
-                <h2 class="text-xl font-bold text-gray-300 uppercase tracking-widest">Clinical Stations</h2>
+        <aside class="flex-[1] flex flex-col h-full bg-white rounded-[2rem] shadow-premium border border-gray-100 overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+                <h2 class="text-2xl font-bold text-text-dark flex items-center gap-3">
+                    <i class="fas fa-user-md text-brand-light-blue"></i> Clinic Status
+                </h2>
             </div>
-
-            <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-4" id="doctor-list">
+            
+            <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4" id="doctor-list">
                 <!-- Populated Dynamically -->
             </div>
         </aside>
@@ -223,27 +147,23 @@
 
     <!-- Overlay "Now Calling" -->
     <div id="overlay">
-        <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-soft-teal/20 rounded-full blur-[100px] animate-pulse">
+        <div class="glass-card p-16 max-w-4xl w-full mx-4 text-center shadow-2xl border-2 border-white relative overflow-hidden">
+            <!-- decorative -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-brand-light-blue"></div>
+            
+            <div class="text-brand-light-blue text-3xl font-bold tracking-[0.2em] uppercase mb-4" id="ov-title">
+                New Patient Call
             </div>
-            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-med-blue/20 rounded-full blur-[100px] animate-pulse"
-                style="animation-delay: 1s;"></div>
-        </div>
-
-        <div class="z-10 flex flex-col items-center">
-            <div class="text-soft-teal text-4xl md:text-6xl font-black tracking-[0.3em] uppercase mb-4 animate-bounce">
-                Now Calling
+            
+            <div class="text-[clamp(8rem,25vh,20rem)] font-extrabold text-text-dark leading-none my-4 tracking-tight" id="ov-ticket">
+                00
             </div>
-            <div class="overlay-ticket-text drop-shadow-2xl" id="ov-ticket">00</div>
-
-            <div class="mt-8 bg-white/10 border border-white/20 rounded-full px-12 py-4 backdrop-blur-xl">
-                <div class="text-4xl md:text-6xl font-bold text-white uppercase tracking-wider text-center" id="ov-doc">
+            
+            <div class="mt-8 bg-gray-50 rounded-2xl py-6 px-8 border border-gray-100 inline-block min-w-[300px]">
+                <p class="text-gray-500 font-semibold uppercase tracking-wider text-sm mb-1">Assigned Doctor</p>
+                <div class="text-4xl font-bold text-brand-blue uppercase" id="ov-doc">
                     DR. NAME
                 </div>
-            </div>
-
-            <div class="mt-6 text-xl md:text-2xl text-gray-400 font-medium tracking-widest uppercase">
-                Please proceed to consultation
             </div>
         </div>
     </div>
@@ -254,7 +174,7 @@
     <script>
         const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const mainTicketEl = document.getElementById('main-ticket');
         const mainRoomEl = document.getElementById('main-room');
@@ -271,14 +191,14 @@
         // Clock Sync
         function updateTime() {
             const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         }
         setInterval(updateTime, 1000); updateTime();
 
         // Data Init
         async function initDisplay() {
-            const { data: docs } = await supabase.from('doctors').select('*').order('id');
+            const { data: docs } = await supabaseClient.from('doctors').select('*').order('id');
             doctorsCache = {};
             if (docs) docs.forEach(d => doctorsCache[d.id] = d);
             await refreshState(true);
@@ -286,16 +206,16 @@
 
         async function refreshState(isInitialLoad = false) {
             const today = new Date().toISOString().split('T')[0];
-
-            const { data: statusData } = await supabase.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
+            
+            const { data: statusData } = await supabaseClient.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
             const currentNum = statusData ? statusData.current_number : 0;
-
+            
             if (isInitialLoad) {
                 lastCalledNum = currentNum;
                 mainTicketEl.innerText = String(currentNum).padStart(2, '0');
             }
 
-            const { data: appts } = await supabase
+            const { data: appts } = await supabaseClient
                 .from('appointments')
                 .select('doctor_id, slot_number, status')
                 .eq('appointment_date', today)
@@ -314,27 +234,38 @@
 
         function renderDoctorList(docStatus) {
             doctorListEl.innerHTML = '';
-            Object.values(doctorsCache).forEach(doc => {
+            const docs = Object.values(doctorsCache);
+            
+            if(docs.length === 0) {
+                doctorListEl.innerHTML = '<div class="text-center text-gray-400 py-10">No active doctors found.</div>';
+                return;
+            }
+
+            docs.forEach(doc => {
                 const currentVal = docStatus[doc.id] || '--';
                 const isActive = currentVal !== '--';
                 const numDisplay = currentVal !== '--' ? String(currentVal).padStart(2, '0') : '--';
-
-                const cardClass = isActive ? 'glass-panel glass-active' : 'glass-panel opacity-60 grayscale-[50%]';
-                const textHighlight = isActive ? 'text-soft-teal' : 'text-gray-500';
-
+                
+                const cardStyle = isActive ? 'border-brand-light-blue bg-blue-50/30 shadow-sm' : 'border-gray-100 bg-white opacity-75';
+                const textHighlight = isActive ? 'text-brand-blue' : 'text-gray-400';
+                const badgeColor = isActive ? 'bg-brand-teal' : 'bg-gray-300';
+                
                 doctorListEl.innerHTML += `
-                    <div class="${cardClass} rounded-2xl p-4 flex items-center justify-between transition-all duration-500">
+                    <div class="border-2 ${cardStyle} rounded-2xl p-4 flex items-center justify-between transition-all duration-300 hover:shadow-md">
                         <div class="flex items-center gap-4">
-                            <div class="w-16 h-16 rounded-xl overflow-hidden border-2 border-slate-600 shadow-lg shrink-0 bg-slate-800">
-                                <img src="${doc.image_url}" class="w-full h-full object-cover">
+                            <div class="relative">
+                                <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-gray-100">
+                                    <img src="${doc.image_url}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="absolute bottom-0 right-0 w-4 h-4 ${badgeColor} border-2 border-white rounded-full"></div>
                             </div>
                             <div>
-                                <h3 class="text-xl font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">${doc.name}</h3>
-                                <p class="text-sm text-gray-400 font-semibold tracking-wider uppercase">${doc.specialty}</p>
+                                <h3 class="text-lg font-bold text-text-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">${doc.name}</h3>
+                                <p class="text-xs text-gray-500 font-semibold tracking-wider uppercase">${doc.specialty}</p>
                             </div>
                         </div>
-                        <div class="flex flex-col items-center bg-slate-900/80 rounded-xl px-5 py-2 border border-white/5 shadow-inner">
-                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Serving</span>
+                        <div class="flex flex-col items-end pr-2">
+                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Ticket</span>
                             <span class="text-3xl font-black ${textHighlight} leading-none">${numDisplay}</span>
                         </div>
                     </div>
@@ -349,43 +280,46 @@
 
             const doc = doctorsCache[doctorId] || { name: 'MEDICAL STAFF' };
             const paddedTicket = String(ticket).padStart(2, '0');
-
+            
             ovTicketEl.innerText = paddedTicket;
             ovDocEl.innerText = doc.name.toUpperCase();
-
+            
             // Interaction might block audio, catch and ignore safely
-            try { await chime.play(); } catch (e) { console.log('Audio requires user interaction first.'); }
-
+            try { await chime.play(); } catch(e) { console.log('Audio requires user interaction first.'); }
+            
+            // reset animation classes
             overlay.classList.add('active');
+            const card = overlay.querySelector('.glass-card');
+            card.classList.remove('animate-in');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('animate-in');
 
-            // Hold overlay for 10 seconds before animating out
+            // Hold overlay before animating out
             setTimeout(() => {
-                ovTicketEl.classList.add('animate-call-out');
-
-                // Update Main board while overlay hides
+                overlay.classList.remove('active');
+                
+                // Update Main board
                 setTimeout(() => {
                     mainTicketEl.innerText = paddedTicket;
-                    mainRoomEl.innerText = `PROCEED TO ${doc.name.toUpperCase()}`;
-
+                    mainRoomEl.innerText = doc.name.toUpperCase();
+                    
                     // Simple pop animation for main board update
                     const container = document.getElementById('main-ticket-container');
-                    container.style.transform = 'scale(1.1)';
+                    container.style.transform = 'scale(1.05)';
                     setTimeout(() => container.style.transform = 'scale(1)', 300);
 
-                    overlay.classList.remove('active');
-                    ovTicketEl.classList.remove('animate-call-out');
                     refreshState();
                     isAnimating = false;
-                }, 1200);
-            }, 10000);
+                }, 400); // Wait for overlay to fade out
+            }, 8000); // Display overlay for 8 seconds
         }
 
         async function checkForNewPatient(newNum) {
             if (newNum > 0 && newNum !== lastCalledNum) {
                 lastCalledNum = newNum;
-
+                
                 const today = new Date().toISOString().split('T')[0];
-                const { data: appt } = await supabase
+                const { data: appt } = await supabaseClient
                     .from('appointments')
                     .select('doctor_id')
                     .eq('slot_number', newNum)
@@ -400,7 +334,7 @@
         }
 
         function initRealtime() {
-            supabase
+            supabaseClient
                 .channel('display_sync')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clinic_status' }, payload => {
                     if (payload.new.doctor_id === 'global') {
@@ -411,13 +345,13 @@
 
             // Fallback Polling for high availability
             setInterval(async () => {
-                if (isAnimating) return;
-                const { data } = await supabase
+                if(isAnimating) return;
+                const { data } = await supabaseClient
                     .from('clinic_status')
                     .select('current_number')
                     .eq('doctor_id', 'global')
                     .maybeSingle();
-
+                
                 if (data && data.current_number !== lastCalledNum) {
                     checkForNewPatient(data.current_number);
                 } else {
@@ -427,12 +361,11 @@
         }
 
         // Initialize Audio unlocking by user click (optional requirement for TVs)
-        document.body.addEventListener('click', () => {
-            chime.play().then(() => { chime.pause(); chime.currentTime = 0; }).catch(e => { });
+        document.body.addEventListener('click', () => { 
+            chime.play().then(() => { chime.pause(); chime.currentTime = 0; }).catch(e=>{}); 
         }, { once: true });
 
         initDisplay().then(initRealtime);
     </script>
 </body>
-
 </html>
