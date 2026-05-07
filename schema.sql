@@ -12,6 +12,9 @@ CREATE TABLE public.doctors (
     fee NUMERIC(10, 2) DEFAULT 5.00,
     start_time TIME DEFAULT '08:00:00',
     slot_duration INTEGER DEFAULT 15,
+    status TEXT DEFAULT 'Active' CHECK (status IN ('Active', 'Emergency', 'Paused', 'Break/Prayer', 'Inactive')),
+    emergency_expected_return TEXT,
+    consultation_duration_minutes INTEGER DEFAULT 15,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -60,6 +63,7 @@ CREATE TABLE public.appointments (
     status TEXT NOT NULL DEFAULT 'pending',
     payment_phone TEXT,
     expires_at TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(doctor_id, appointment_date, slot_number) -- Prevent double booking
 );
@@ -154,12 +158,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- INITIAL DATA INSERTS
 -- ==========================================
 
-INSERT INTO public.doctors (name, specialty, image_url, fee, start_time, slot_duration) VALUES
-('Dr. Ahmed Ali', 'Senior Surgeon', 'https://ui-avatars.com/api/?name=Ahmed+Ali&background=EBF8FF&color=007BFF&size=150', 5.00, '08:00:00', 15),
-('Dr. Sarah Jama', 'Pediatrician', 'https://ui-avatars.com/api/?name=Sarah+Jama&background=EBF8FF&color=007BFF&size=150', 5.00, '08:30:00', 20),
-('Dr. Hassan Omar', 'Orthodontist', 'https://ui-avatars.com/api/?name=Hassan+Omar&background=EBF8FF&color=007BFF&size=150', 5.00, '09:00:00', 15),
-('Dr. Aisha Nur', 'General Medicine', 'https://ui-avatars.com/api/?name=Aisha+Nur&background=EBF8FF&color=007BFF&size=150', 5.00, '08:00:00', 10),
-('Dr. Khalid Osman', 'Neurologist', 'https://ui-avatars.com/api/?name=Khalid+Osman&background=EBF8FF&color=007BFF&size=150', 5.00, '10:00:00', 30);
+INSERT INTO public.doctors (name, specialty, image_url, fee, start_time, slot_duration, consultation_duration_minutes) VALUES
+('Dr. Ahmed Ali', 'Senior Surgeon', 'https://ui-avatars.com/api/?name=Ahmed+Ali&background=EBF8FF&color=007BFF&size=150', 5.00, '08:00:00', 15, 15),
+('Dr. Sarah Jama', 'Pediatrician', 'https://ui-avatars.com/api/?name=Sarah+Jama&background=EBF8FF&color=007BFF&size=150', 5.00, '08:30:00', 20, 20),
+('Dr. Hassan Omar', 'Orthodontist', 'https://ui-avatars.com/api/?name=Hassan+Omar&background=EBF8FF&color=007BFF&size=150', 5.00, '09:00:00', 15, 15),
+('Dr. Aisha Nur', 'General Medicine', 'https://ui-avatars.com/api/?name=Aisha+Nur&background=EBF8FF&color=007BFF&size=150', 5.00, '08:00:00', 10, 10),
+('Dr. Khalid Osman', 'Neurologist', 'https://ui-avatars.com/api/?name=Khalid+Osman&background=EBF8FF&color=007BFF&size=150', 5.00, '10:00:00', 30, 30);
 
 -- Generate initial schedule for doctors
 DO $$
@@ -179,7 +183,22 @@ BEGIN
 END $$;
 
 -- ==========================================
--- ENABLE REALTIME REPLICATION FOR WEBSOCKETS
+-- 7. SETTINGS TABLE
 -- ==========================================
--- This allows the admin.html dashboard to listen for live incoming bookings.
+CREATE TABLE public.settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read on settings" ON public.settings FOR SELECT USING (true);
+CREATE POLICY "Allow auth update on settings" ON public.settings FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+INSERT INTO public.settings (key, value) VALUES 
+('ticker_text', 'Hospital is open 24/7 • Please do not smoke inside • Wear a mask • Thank you for choosing HealthFirst');
+
+-- ENABLE REALTIME REPLICATION FOR WEBSOCKETS
 ALTER PUBLICATION supabase_realtime ADD TABLE appointments;
+ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+ALTER PUBLICATION supabase_realtime ADD TABLE doctors;

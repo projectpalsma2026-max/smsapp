@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Command Center | HealthFirst</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'med-blue': '#007BFF',
+                        'soft-teal': '#20c997',
+                        'dark-bg': '#0f172a',
+                    },
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            background-image: radial-gradient(circle at 0% 0%, #1e293b 0%, transparent 50%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes border-pulse {
+            0%, 100% { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+            50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        }
+        .timer-expired {
+            animation: border-pulse 1.5s infinite;
+            border-width: 2px !important;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <header class="h-20 glass border-b border-slate-700/50 flex items-center justify-between px-8 sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <a href="admin.html" class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="text-2xl font-bold tracking-wide">Queue Command Center</h1>
+        </div>
+        <div id="live-badge" class="text-sm text-soft-teal font-semibold flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-soft-teal animate-pulse"></div> Live Connection
+        </div>
+    </header>
+
+    <main class="p-4 md:p-12 max-w-4xl mx-auto">
+        <div id="main-card" class="glass rounded-[2.5rem] p-8 md:p-12 text-center relative overflow-hidden shadow-2xl transition-all duration-500">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-med-blue/10 rounded-full blur-3xl"></div>
+            
+            <h2 class="text-3xl font-bold mb-8">Reception Controller</h2>
+
+            <!-- Doctor Selection -->
+            <div class="max-w-md mx-auto mb-10 text-left">
+                <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest ml-1">Select a Doctor Clinic:</label>
+                <select id="active-doctor-id" onchange="loadDoctorState()" class="w-full bg-slate-800 border border-slate-600 text-white rounded-2xl p-4 text-lg font-semibold focus:outline-none focus:border-med-blue transition shadow-xl">
+                    <option value="" disabled selected>Select a Doctor...</option>
+                </select>
+            </div>
+
+            <!-- State Display -->
+            <div id="control-panel" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div class="mb-12">
+                    <span class="text-gray-500 uppercase tracking-widest text-sm font-bold">Now Serving Ticket</span>
+                    <div class="text-[140px] font-black text-white leading-none mt-2" id="now-serving-number">--</div>
+                    <div id="doctor-status-badge" class="inline-flex items-center gap-2 px-6 py-2 rounded-full text-sm font-black mt-6 border uppercase tracking-widest">
+                        ACTIVE
+                    </div>
+                </div>
+
+                <!-- Main Actions Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <button onclick="nextPatient()" class="p-8 rounded-3xl bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20 transition-all flex flex-col items-center gap-3 group">
+                        <i class="fas fa-user-plus text-4xl group-hover:scale-110 transition"></i>
+                        <span class="font-bold text-xl">Next Patient</span>
+                    </button>
+                    
+                    <button onclick="finishShift()" class="p-8 rounded-3xl bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20 transition-all flex flex-col items-center gap-3 group">
+                        <i class="fas fa-door-open text-4xl group-hover:scale-110 transition"></i>
+                        <span class="font-bold text-xl">Finish Shift</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-10">
+                    <button id="emergency-btn" onclick="toggleStatus('Emergency')" class="p-5 rounded-2xl border border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500 hover:text-white transition-all font-bold flex flex-col items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i> Emergency
+                    </button>
+                    <button id="break-btn" onclick="toggleStatus('Break/Prayer')" class="p-5 rounded-2xl border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500 hover:text-white transition-all font-bold flex flex-col items-center gap-2">
+                        <i class="fas fa-coffee text-2xl"></i> Break / Prayer
+                    </button>
+                </div>
+
+                <!-- Timer Section -->
+                <div id="timer-container" class="mt-4 hidden">
+                    <div id="timer-box" class="bg-slate-800/80 rounded-[2rem] p-8 border border-slate-700 transition-all duration-300">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Consultation Progress</p>
+                        <div id="countdown-display" class="text-6xl font-mono font-black text-white">00:00</div>
+                        <div class="w-full bg-slate-700 h-2 rounded-full mt-6 overflow-hidden">
+                            <div id="timer-progress" class="bg-soft-teal h-full transition-all duration-1000" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="py-24 text-gray-500">
+                <div class="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-stethoscope text-4xl opacity-30"></i>
+                </div>
+                <p class="text-xl font-medium">Please select a doctor to begin queue management.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://dftaeukzveskufccpqgs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FIXtJFY25jQUG0Y4YiAvPQ_B3BN_vSg';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let activeDoctor = null;
+        let currentAppointment = null;
+        let timerInterval = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            await fetchDoctors();
+            initRealtime();
+        });
+
+        async function fetchDoctors() {
+            const { data } = await supabaseClient.from('doctors').select('*').order('name');
+            const select = document.getElementById('active-doctor-id');
+            if (data) {
+                data.forEach(doc => {
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.textContent = doc.name;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        async function loadDoctorState() {
+            const id = document.getElementById('active-doctor-id').value;
+            if (!id) return;
+
+            const { data: doc } = await supabaseClient.from('doctors').select('*').eq('id', id).single();
+            activeDoctor = doc;
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('control-panel').classList.remove('hidden');
+
+            updateStatusUI();
+            await fetchCurrentServing();
+        }
+
+        async function fetchCurrentServing() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await supabaseClient
+                .from('appointments')
+                .select('*')
+                .eq('doctor_id', activeDoctor.id)
+                .eq('appointment_date', today)
+                .in('status', ['Serving', 'Calling'])
+                .order('started_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            
+            currentAppointment = data;
+            document.getElementById('now-serving-number').innerText = data ? String(data.slot_number).padStart(2, '0') : '--';
+            
+            if (data && data.started_at) {
+                startTimer(data);
+            } else {
+                stopTimer();
+            }
+        }
+
+        function updateStatusUI() {
+            const status = activeDoctor.status;
+            const badge = document.getElementById('doctor-status-badge');
+            const mainCard = document.getElementById('main-card');
+            
+            badge.innerText = status.toUpperCase();
+            
+            // Reset state
+            badge.className = "inline-flex items-center gap-2 px-6 py-2 rounded-full text-sm font-black mt-6 border uppercase tracking-widest ";
+            
+            if (status === 'Emergency') {
+                badge.classList.add('bg-red-500/10', 'text-red-400', 'border-red-500/30', 'animate-pulse');
+            } else if (status === 'Break/Prayer') {
+                badge.classList.add('bg-amber-500/10', 'text-amber-400', 'border-amber-500/30');
+            } else if (status === 'Inactive') {
+                badge.classList.add('bg-slate-700/50', 'text-gray-400', 'border-slate-600');
+            } else {
+                badge.classList.add('bg-green-500/10', 'text-green-400', 'border-green-500/20');
+            }
+        }
+
+        async function toggleStatus(targetStatus) {
+            if (!activeDoctor) return;
+            const current = activeDoctor.status;
+            const newStatus = current === targetStatus ? 'Active' : targetStatus;
+            
+            let expectedReturn = null;
+            if (newStatus === 'Emergency') {
+                expectedReturn = prompt("Enter expected return time (e.g. 11:30 AM):");
+            }
+
+            const { error } = await supabaseClient.from('doctors').update({ 
+                status: newStatus, 
+                emergency_expected_return: expectedReturn 
+            }).eq('id', activeDoctor.id);
+
+            if (!error) {
+                activeDoctor.status = newStatus;
+                updateStatusUI();
+                Toastify({ text: `Doctor status updated to: ${newStatus}`, style: { background: "#20c997" } }).showToast();
+            }
+        }
+
+        async function finishShift() {
+            if (!confirm("Are you sure you want to finish this doctor's shift? They will be hidden from the TV display.")) return;
+            
+            const { error } = await supabaseClient.from('doctors').update({ status: 'Inactive' }).eq('id', activeDoctor.id);
+            if (!error) {
+                activeDoctor.status = 'Inactive';
+                updateStatusUI();
+                Toastify({ text: "Doctor shift ended. Status set to Inactive.", style: { background: "#3b82f6" } }).showToast();
+            }
+        }
+
+        async function nextPatient() {
+            if (!activeDoctor) return;
+            const today = new Date().toISOString().split('T')[0];
+
+            // 1. Mark current as Served
+            if (currentAppointment) {
+                await supabaseClient.from('appointments').update({ status: 'Served' }).eq('id', currentAppointment.id);
+            }
+
+            // 2. Find next verified
+            const { data: next } = await supabaseClient
+                .from('appointments')
+                .select('*')
+                .eq('doctor_id', activeDoctor.id)
+                .eq('appointment_date', today)
+                .eq('status', 'verified')
+                .order('slot_number', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (!next) {
+                Toastify({ text: "No more verified patients in queue for this doctor.", style: { background: "#6b7280" } }).showToast();
+                return;
+            }
+
+            // 3. Update Status and started_at
+            const nowIso = new Date().toISOString();
+            await supabaseClient.from('appointments').update({ status: 'Calling', started_at: nowIso }).eq('id', next.id);
+            
+            // 4. Update Global Queue for display ping
+            await supabaseClient.from('clinic_status').update({ current_number: next.slot_number }).eq('doctor_id', 'global');
+
+            await fetchCurrentServing();
+            Toastify({ text: "🔊 Calling Ticket #" + next.slot_number, style: { background: "#22c55e" } }).showToast();
+        }
+
+        function startTimer(appt) {
+            const start = new Date(appt.started_at).getTime();
+            const duration = (activeDoctor.consultation_duration_minutes || 15) * 60 * 1000;
+            const end = start + duration;
+            
+            document.getElementById('timer-container').classList.remove('hidden');
+            const timerBox = document.getElementById('timer-box');
+            timerBox.classList.remove('timer-expired');
+
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const remaining = end - now;
+                
+                if (remaining <= 0) {
+                    document.getElementById('countdown-display').innerText = "00:00";
+                    document.getElementById('timer-progress').style.width = '0%';
+                    timerBox.classList.add('timer-expired');
+                    return;
+                }
+
+                const m = Math.floor(remaining / 60000);
+                const s = Math.floor((remaining % 60000) / 1000);
+                document.getElementById('countdown-display').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+                document.getElementById('timer-progress').style.width = (remaining / duration * 100) + '%';
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('timer-container').classList.add('hidden');
+        }
+
+        function initRealtime() {
+            supabaseClient.channel('queue_command_realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'doctors' }, payload => {
+                    if (activeDoctor && payload.new.id === activeDoctor.id) {
+                        activeDoctor = payload.new;
+                        updateStatusUI();
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
+                    if (activeDoctor && payload.new.doctor_id === activeDoctor.id) {
+                        fetchCurrentServing();
+                    }
+                })
+                .subscribe();
+        }
+    </script>
+</body>
+</html>

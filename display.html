@@ -81,6 +81,38 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 30s linear infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .animate-blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes soft-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.98); opacity: 0.9; }
+        }
+        .animate-soft-pulse {
+            animation: soft-pulse 2s infinite ease-in-out;
+        }
+        
+        .emergency-card {
+            background: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -101,7 +133,7 @@
                 <div id="date" class="text-sm font-bold text-gray-500 uppercase tracking-wider">MONDAY, JANUARY 1</div>
                 <div class="text-brand-light-blue font-medium text-xs">Queue Live Sync</div>
             </div>
-            <div id="clock" class="text-5xl font-bold tracking-tight text-text-dark font-mono">00:00</div>
+            <div id="clock" class="text-5xl font-bold tracking-tight text-text-dark font-mono">00:00:00</div>
         </div>
     </header>
 
@@ -144,6 +176,18 @@
             </div>
         </aside>
     </main>
+
+    <!-- Footer Ticker -->
+    <footer class="h-[6vh] bg-brand-blue text-white flex items-center overflow-hidden relative z-50 border-t-4 border-white">
+        <div class="bg-brand-dark flex items-center px-6 h-full z-10 shadow-lg font-bold uppercase tracking-tighter text-sm whitespace-nowrap bg-[#004494]">
+            Announcements
+        </div>
+        <div class="flex-1 relative h-full flex items-center">
+            <div id="ticker-content" class="animate-marquee font-medium tracking-wide text-lg">
+                Loading hospital announcements...
+            </div>
+        </div>
+    </footer>
 
     <!-- Overlay "Now Calling" -->
     <div id="overlay">
@@ -191,22 +235,28 @@
         // Clock Sync
         function updateTime() {
             const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         }
         setInterval(updateTime, 1000); updateTime();
 
         // Data Init
         async function initDisplay() {
-            const { data: docs } = await supabaseClient.from('doctors').select('*').order('id');
-            doctorsCache = {};
-            if (docs) docs.forEach(d => doctorsCache[d.id] = d);
+            await fetchTicker();
             await refreshState(true);
         }
 
+        async function fetchTicker() {
+            const { data } = await supabaseClient.from('settings').select('value').eq('key', 'ticker_text').single();
+            if (data) document.getElementById('ticker-content').innerText = data.value;
+        }
+
         async function refreshState(isInitialLoad = false) {
-            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentDayIndex = now.getDay();
             
+            // 1. Fetch Global Status
             const { data: statusData } = await supabaseClient.from('clinic_status').select('current_number').eq('doctor_id', 'global').single();
             const currentNum = statusData ? statusData.current_number : 0;
             
@@ -215,21 +265,53 @@
                 mainTicketEl.innerText = String(currentNum).padStart(2, '0');
             }
 
+            // 2. Fetch Active Doctors for TODAY
+            const { data: schedules } = await supabaseClient
+                .from('doctor_schedule')
+                .select('doctor_id')
+                .eq('day_index', currentDayIndex)
+                .eq('is_active', true);
+            
+            const activeDocIds = schedules ? schedules.map(s => s.doctor_id) : [];
+
+            if (activeDocIds.length === 0) {
+                renderDoctorList({});
+                return;
+            }
+
+            const { data: doctors } = await supabaseClient
+                .from('doctors')
+                .select('*')
+                .in('id', activeDocIds)
+                .neq('status', 'Inactive')
+                .order('id');
+            
+            doctorsCache = {};
+            if (doctors) doctors.forEach(d => doctorsCache[d.id] = d);
+
             const { data: appts } = await supabaseClient
                 .from('appointments')
                 .select('doctor_id, slot_number, status')
-                .eq('appointment_date', today)
-                .in('status', ['Calling', 'Served', 'Active'])
-                .order('slot_number', { ascending: false });
+                .eq('appointment_date', todayStr)
+                .in('status', ['verified', 'Serving', 'Calling'])
+                .order('slot_number', { ascending: true });
 
-            const docStatus = {};
+            const doctorNowNext = {};
+            doctors.forEach(d => doctorNowNext[d.id] = { now: '--', next: '--' });
+
             if (appts) {
                 appts.forEach(a => {
-                    if (!docStatus[a.doctor_id]) docStatus[a.doctor_id] = a.slot_number;
+                    const status = doctorNowNext[a.doctor_id];
+                    if (!status) return;
+                    if (a.status === 'Serving' || a.status === 'Calling') {
+                        status.now = a.slot_number;
+                    } else if (a.status === 'verified' && status.next === '--') {
+                        status.next = a.slot_number;
+                    }
                 });
             }
 
-            renderDoctorList(docStatus);
+            renderDoctorList(doctorNowNext);
         }
 
         function renderDoctorList(docStatus) {
@@ -237,36 +319,81 @@
             const docs = Object.values(doctorsCache);
             
             if(docs.length === 0) {
-                doctorListEl.innerHTML = '<div class="text-center text-gray-400 py-10">No active doctors found.</div>';
+                doctorListEl.innerHTML = '<div class="text-center text-gray-400 py-10">No active doctors scheduled for today.</div>';
                 return;
             }
 
+            const now = new Date();
+            const currentTimeStr = now.toTimeString().split(' ')[0]; // HH:mm:ss
+
             docs.forEach(doc => {
-                const currentVal = docStatus[doc.id] || '--';
-                const isActive = currentVal !== '--';
-                const numDisplay = currentVal !== '--' ? String(currentVal).padStart(2, '0') : '--';
+                const statusInfo = docStatus[doc.id] || { now: '--', next: '--' };
+                const isEmergency = doc.status === 'Emergency';
+                const isBreak = doc.status === 'Break/Prayer';
+                const isPaused = doc.status === 'Paused';
                 
-                const cardStyle = isActive ? 'border-brand-light-blue bg-blue-50/30 shadow-sm' : 'border-gray-100 bg-white opacity-75';
-                const textHighlight = isActive ? 'text-brand-blue' : 'text-gray-400';
-                const badgeColor = isActive ? 'bg-brand-teal' : 'bg-gray-300';
+                const nowDisplay = statusInfo.now !== '--' ? String(statusInfo.now).padStart(2, '0') : '--';
+                const nextDisplay = statusInfo.next !== '--' ? String(statusInfo.next).padStart(2, '0') : '--';
+                
+                let cardClass = "border-2 rounded-2xl p-4 flex items-center justify-between transition-all duration-300 hover:shadow-md ";
+                let statusBadgeClass = "absolute bottom-0 right-0 w-4 h-4 border-2 border-white rounded-full ";
+                let mainTextColor = "text-brand-blue";
+                let statusSubText = `<p class="text-xs text-gray-500 font-semibold tracking-wider uppercase">${doc.specialty}</p>`;
+
+                if (isEmergency) {
+                    cardClass += "emergency-card animate-pulse";
+                    statusBadgeClass += "bg-red-500";
+                    mainTextColor = "text-red-600";
+                    statusSubText = `<p class="text-xs font-black text-red-600 animate-blink uppercase tracking-tighter">EMERGENCY - PLEASE WAIT${doc.emergency_expected_return ? `<br><span class="text-[10px]">Return: ${doc.emergency_expected_return}</span>` : ''}</p>`;
+                } else if (isBreak) {
+                    cardClass += "break-card animate-soft-pulse";
+                    statusBadgeClass += "bg-amber-500";
+                    mainTextColor = "text-amber-600";
+                    statusSubText = `<p class="text-xs font-black text-amber-600 uppercase tracking-tighter">BREAK / PRAYER</p>`;
+                } else if (isPaused) {
+                    cardClass += "bg-slate-50 border-slate-200 opacity-90";
+                    statusBadgeClass += "bg-slate-400";
+                    mainTextColor = "text-slate-600";
+                } else {
+                    cardClass += "border-brand-light-blue bg-blue-50/30 shadow-sm";
+                    statusBadgeClass += "bg-brand-teal";
+                }
+
+                // Dynamic Now Text Logic
+                let ticketNowDisplay = nowDisplay;
+                if (nowDisplay === '--' && !isEmergency && !isBreak && !isPaused) {
+                    if (currentTimeStr < doc.start_time) {
+                        ticketNowDisplay = `<span class="text-sm font-bold opacity-60">Starts at ${doc.start_time.slice(0, 5)}</span>`;
+                    } else {
+                        ticketNowDisplay = `<span class="text-sm font-bold opacity-60">Soon</span>`;
+                    }
+                }
                 
                 doctorListEl.innerHTML += `
-                    <div class="border-2 ${cardStyle} rounded-2xl p-4 flex items-center justify-between transition-all duration-300 hover:shadow-md">
+                    <div class="${cardClass}">
                         <div class="flex items-center gap-4">
                             <div class="relative">
                                 <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-gray-100">
                                     <img src="${doc.image_url}" class="w-full h-full object-cover">
                                 </div>
-                                <div class="absolute bottom-0 right-0 w-4 h-4 ${badgeColor} border-2 border-white rounded-full"></div>
+                                <div class="${statusBadgeClass}"></div>
                             </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-text-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">${doc.name}</h3>
-                                <p class="text-xs text-gray-500 font-semibold tracking-wider uppercase">${doc.specialty}</p>
+                            <div class="max-w-[200px]">
+                                <h3 class="text-lg font-bold text-text-dark whitespace-nowrap overflow-hidden text-ellipsis">${doc.name}</h3>
+                                ${statusSubText}
                             </div>
                         </div>
                         <div class="flex flex-col items-end pr-2">
-                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Ticket</span>
-                            <span class="text-3xl font-black ${textHighlight} leading-none">${numDisplay}</span>
+                            <div class="flex gap-4">
+                                <div class="text-center min-w-[60px]">
+                                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest block">Now</span>
+                                    <span class="text-3xl font-black ${mainTextColor} leading-none flex items-center justify-center h-8">${ticketNowDisplay}</span>
+                                </div>
+                                <div class="text-center border-l border-gray-200 pl-4 min-w-[60px]">
+                                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest block">Next</span>
+                                    <span class="text-2xl font-bold text-gray-400 leading-none h-8 flex items-center justify-center">${nextDisplay}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -340,6 +467,15 @@
                     if (payload.new.doctor_id === 'global') {
                         checkForNewPatient(payload.new.current_number);
                     }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'doctors' }, payload => {
+                    refreshState();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, payload => {
+                    refreshState();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'key=eq.ticker_text' }, payload => {
+                    document.getElementById('ticker-content').innerText = payload.new.value;
                 })
                 .subscribe();
 

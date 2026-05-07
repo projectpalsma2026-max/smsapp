@@ -35,6 +35,9 @@
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         /* Anti-gravity & Floating Minimalism Styles */
         body {
@@ -301,7 +304,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold mb-1 text-gray-700 ml-1">Phone Number</label>
-                        <input type="text" id="patientPhone" placeholder="061XXXXXXX" class="w-full p-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-med-blue outline-none transition shadow-sm">
+                        <input type="text" id="patientPhone" value="+252" placeholder="+25261XXXXXXX" class="w-full p-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-med-blue outline-none transition shadow-sm">
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
@@ -417,7 +420,7 @@
                     <div class="glass rounded-2xl p-6 bg-white/60 border border-gray-200 shadow-lg">
                         <div class="mb-4">
                             <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Enter Your Payment Number (EVC Plus)</label>
-                            <input type="text" id="senderPhone" placeholder="061XXXXXXX" class="w-full p-4 rounded-xl border-2 border-med-blue/20 bg-white focus:border-med-blue outline-none transition text-center font-bold text-lg">
+                            <input type="text" id="senderPhone" value="+252" placeholder="+25261XXXXXXX" class="w-full p-4 rounded-xl border-2 border-med-blue/20 bg-white focus:border-med-blue outline-none transition text-center font-bold text-lg">
                         </div>
 
                         <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center shadow-sm">
@@ -502,7 +505,86 @@
         document.addEventListener('DOMContentLoaded', () => {
             fetchDoctors();
             restorePaymentSession(); // Restore if refreshed
+            setupInputValidation();
         });
+
+        // --- Validation Helpers ---
+        function showError(title, text) {
+            Swal.fire({
+                icon: 'error',
+                title: title,
+                text: text,
+                confirmButtonColor: '#007BFF',
+                customClass: {
+                    popup: 'rounded-[2rem]',
+                    confirmButton: 'rounded-xl px-8 py-3'
+                }
+            });
+        }
+
+        function setupInputValidation() {
+            const phoneInputs = ['patientPhone', 'senderPhone'];
+            const nameInput = document.getElementById('patientName');
+
+            phoneInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+
+                // Enforce +252 prefix and numeric only after that
+                el.addEventListener('input', (e) => {
+                    let val = e.target.value;
+                    
+                    // Always start with +252
+                    if (!val.startsWith('+252')) {
+                        val = '+252' + val.replace(/^\+?2?5?2?/, '');
+                    }
+                    
+                    // Remove any non-digits after the +
+                    const prefix = '+';
+                    const digits = val.slice(1).replace(/\D/g, '');
+                    e.target.value = prefix + digits;
+
+                    // Limit length to 13 (+252 + 2 + 7)
+                    if (e.target.value.length > 13) {
+                        e.target.value = e.target.value.slice(0, 13);
+                    }
+                });
+
+                // Prevent cursor from going before +252
+                el.addEventListener('keydown', (e) => {
+                    if (el.selectionStart < 4 && (e.key === 'Backspace' || e.key === 'Delete')) {
+                        e.preventDefault();
+                    }
+                });
+                
+                el.addEventListener('click', () => {
+                    if (el.selectionStart < 4) {
+                        el.setSelectionRange(4, 4);
+                    }
+                });
+            });
+
+            // Name field: Only letters and spaces
+            nameInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const filtered = val.replace(/[^a-zA-Z\s]/g, '');
+                if (val !== filtered) {
+                    e.target.value = filtered;
+                }
+            });
+        }
+
+        function validatePhone(phone) {
+            // Rule: +252 + (61|62|68) + 7 digits
+            const regex = /^\+252(61|62|68)\d{7}$/;
+            return regex.test(phone);
+        }
+
+        function validateName(name) {
+            // Rule: Only letters and spaces
+            const regex = /^[a-zA-Z\s]+$/;
+            return regex.test(name);
+        }
 
         // 0. Persistence Logic
         function restorePaymentSession() {
@@ -754,8 +836,18 @@
             const city = document.getElementById('citySelect').value;
             const district = document.getElementById('districtSelect').value;
 
-            if(!name || !phone || !city || !district) {
-                alert('Fadlan wada buuxi dhammaan macluumaadka.');
+            if (!name || !phone || !city || !district) {
+                showError('Missing Information', 'Please fill in all details to proceed.');
+                return;
+            }
+
+            if (!validateName(name)) {
+                showError('Invalid Name', 'Full Name must only contain letters and spaces.');
+                return;
+            }
+
+            if (!validatePhone(phone)) {
+                showError('Invalid Phone Format', 'Use +252 followed by 61/62/68 and 7 digits.');
                 return;
             }
 
@@ -891,7 +983,12 @@
         async function processPayment() {
             const senderPhone = document.getElementById('senderPhone').value.trim();
             if(!senderPhone) {
-                alert('Fadlan geli lambarka aad lacagta ka soo dirayso.');
+                showError('Missing Phone', 'Fadlan geli lambarka aad lacagta ka soo dirayso.');
+                return;
+            }
+
+            if (!validatePhone(senderPhone)) {
+                showError('Invalid Phone Format', 'Use +252 followed by 61/62/68 and 7 digits.');
                 return;
             }
 

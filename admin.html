@@ -164,9 +164,13 @@
                 <span id="nav-badge"
                     class="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
             </a>
-            <a href="#" onclick="showSection('queue')" id="nav-queue"
+            <a href="queue-command.html" id="nav-queue"
                 class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition">
-                <i class="fas fa-users-viewfinder w-6 opacity-75"></i> Queue Control
+                <i class="fas fa-users-viewfinder w-6 opacity-75"></i> Queue Command
+            </a>
+            <a href="#" onclick="showSection('settings')" id="nav-settings"
+                class="nav-link flex items-center px-4 py-3 text-gray-400 hover:text-white rounded-r-xl transition">
+                <i class="fas fa-cog w-6 opacity-75"></i> Settings
             </a>
             
             <a href="display.html" target="_blank"
@@ -359,38 +363,19 @@
                 </div>
             </div>
 
-            <!-- SECTION: Queue Control -->
-            <div id="sec-queue" class="hidden space-y-6">
-                <div class="max-w-2xl mx-auto">
-                    <div class="glass rounded-[2.5rem] p-12 text-center relative overflow-hidden">
-                        <div class="absolute -top-10 -right-10 w-40 h-40 bg-med-blue/10 rounded-full blur-3xl"></div>
-                        <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-soft-teal/10 rounded-full blur-3xl"></div>
-                        
-                        <h2 class="text-2xl font-bold mb-2">Live Queue Status</h2>
-                        <p class="text-gray-400 mb-8">Manage the current patient flow in real-time.</p>
-
-                        <div class="mb-12">
-                            <span class="text-gray-500 uppercase tracking-widest text-sm font-bold">Now Calling</span>
-                            <div class="text-[120px] font-black text-white leading-none mt-4 animate-pulse" id="live-queue-number">0</div>
-                            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-bold mt-4">
-                                <div class="w-2 h-2 rounded-full bg-green-500 animate-ping"></div>
-                                LIVE SYNC ENABLED
-                            </div>
+            <!-- SECTION: Settings Manager -->
+            <div id="sec-settings" class="hidden space-y-6">
+                <div class="glass rounded-2xl p-8 max-w-2xl mx-auto">
+                    <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i class="fas fa-bullhorn text-med-blue"></i> Global Announcements
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Display Ticker Text</label>
+                            <textarea id="setting-ticker" rows="4" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-4 focus:outline-none focus:border-med-blue transition"></textarea>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button id="next-btn" onclick="nextPatient()" class="p-6 rounded-2xl bg-med-blue hover:bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-all flex flex-col items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i id="next-icon" class="fas fa-user-plus text-3xl group-hover:scale-110 transition"></i>
-                                <span id="next-text" class="font-bold text-lg">Next Patient</span>
-                            </button>
-                            <button id="skip-btn" onclick="skipPatient()" class="p-6 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500 hover:text-white transition-all flex flex-col items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i class="fas fa-forward-step text-3xl group-hover:scale-110 transition"></i>
-                                <span class="font-bold text-lg">Skip Number</span>
-                            </button>
-                        </div>
-
-                        <button onclick="resetQueue()" class="mt-8 text-gray-500 hover:text-red-400 transition flex items-center gap-2 mx-auto text-sm font-medium">
-                            <i class="fas fa-undo"></i> Start Day / Reset Counter
+                        <button onclick="saveSettings()" class="w-full py-4 bg-med-blue hover:bg-blue-600 text-white font-bold rounded-xl shadow-lg transition">
+                            Update All Displays
                         </button>
                     </div>
                 </div>
@@ -447,6 +432,12 @@
                             class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
                             value="15">
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-1">Consultation Mins</label>
+                        <input type="number" id="docConsultMins" required
+                            class="w-full bg-slate-800/50 border border-slate-600 text-white rounded-xl p-3 focus:outline-none focus:border-med-blue transition"
+                            value="15">
+                    </div>
                 </div>
                 <button type="submit"
                     class="w-full py-3 bg-med-blue hover:bg-blue-600 text-white rounded-xl font-bold transition shadow-lg mt-4">Save
@@ -469,7 +460,7 @@
             activeNav.classList.remove('text-gray-400');
             activeNav.classList.add('active', 'text-white');
 
-            ['dashboard', 'doctors', 'schedule', 'appointments'].forEach(s => {
+            ['dashboard', 'doctors', 'schedule', 'appointments', 'settings'].forEach(s => {
                 document.getElementById('sec-' + s).classList.add('hidden');
             });
             document.getElementById('sec-' + sec).classList.remove('hidden');
@@ -479,7 +470,7 @@
                 'doctors': 'Master Doctor Database',
                 'schedule': 'Schedules & Routing',
                 'appointments': 'Terminal Verification',
-                'queue': 'Live Queue Management'
+                'settings': 'Global System Settings'
             };
             document.getElementById('page-title').innerText = titles[sec];
         }
@@ -492,6 +483,7 @@
         async function initDashboard() {
             await fetchDoctors();
             await fetchAppointmentsData();
+            await fetchSettings();
 
             // Set up Supabase Realtime Subscription for incoming UI bookings
             supabase
@@ -505,137 +497,20 @@
                 .subscribe((status) => {
                     console.log('Realtime Status:', status);
                 });
-
-            // Init Queue Sync
-            initQueueSync();
         }
 
-        // --- QUEUE LOGIC ---
-        let currentQueueId = null;
-        let currentQueueNumber = 0;
-        const dingDong = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-
-        async function initQueueSync() {
-            // Fetch initial status
-            const { data, error } = await supabase.from('clinic_status').select('*').eq('doctor_id', 'global').single();
-            if (error) {
-                console.error("Queue row not found. Creating one...");
-                const { data: newData } = await supabase.from('clinic_status').insert([{ doctor_id: 'global', current_number: 0 }]).select().single();
-                if (newData) {
-                    currentQueueId = newData.id;
-                    updateQueueUI(0);
-                }
-            } else {
-                currentQueueId = data.id;
-                currentQueueNumber = data.current_number;
-                updateQueueUI(data.current_number);
-            }
-
-            // Realtime Listener for Queue
-            supabase
-                .channel('public:clinic_status')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clinic_status' }, payload => {
-                    if (payload.new.doctor_id === 'global') {
-                        currentQueueNumber = payload.new.current_number;
-                        updateQueueUI(currentQueueNumber);
-                        dingDong.play().catch(e => console.log("Audio play blocked by browser. Interaction needed."));
-                    }
-                })
-                .subscribe();
+        async function fetchSettings() {
+            const { data } = await supabase.from('settings').select('*').eq('key', 'ticker_text').single();
+            if (data) document.getElementById('setting-ticker').value = data.value;
         }
 
-        function updateQueueUI(num) {
-            const el = document.getElementById('live-queue-number');
-            if (el) el.innerText = num;
-        }
-
-        async function nextPatient() {
-            const btn = document.getElementById('next-btn');
-            const skipBtn = document.getElementById('skip-btn');
-            const icon = document.getElementById('next-icon');
-            const text = document.getElementById('next-text');
-            const todayDate = new Date().toISOString().split('T')[0];
-
-            try {
-                // Find the next verified appointment slot
-                const { data: nextAppt, error: findErr } = await supabase
-                    .from('appointments')
-                    .select('id, slot_number')
-                    .eq('status', 'verified')
-                    .eq('appointment_date', todayDate)
-                    .gt('slot_number', currentQueueNumber)
-                    .order('slot_number', { ascending: true })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (findErr) throw findErr;
-
-                if (!nextAppt) {
-                    Toastify({ 
-                        text: "No more verified patients for today!", 
-                        style: { background: "#6b7280" },
-                        duration: 4000 
-                    }).showToast();
-                    return;
-                }
-
-                const nextNum = nextAppt.slot_number;
-
-                // Update the appointment status to 'Calling' - This triggers the Display Overlay
-                const { error: callErr } = await supabase
-                    .from('appointments')
-                    .update({ status: 'Calling' })
-                    .eq('id', nextAppt.id);
-
-                if (callErr) throw callErr;
-                
-                // Update the live status
-                const { error: updateErr } = await supabase
-                    .from('clinic_status')
-                    .update({ current_number: nextNum })
-                    .eq('doctor_id', 'global');
-
-                if (updateErr) throw updateErr;
-
-                // Success - Refresh local data to keep counts in sync
-                fetchAppointmentsData();
-
-                // Success - Start 15s Countdown Lock for BOTH buttons
-                btn.disabled = true;
-                skipBtn.disabled = true;
-                icon.className = "fas fa-clock text-3xl animate-spin";
-                
-                let timeLeft = 15;
-                const interval = setInterval(() => {
-                    timeLeft--;
-                    text.innerText = `Wait (${timeLeft}s)`;
-                    if (timeLeft <= 0) {
-                        clearInterval(interval);
-                        btn.disabled = false;
-                        skipBtn.disabled = false;
-                        icon.className = "fas fa-user-plus text-3xl group-hover:scale-110 transition";
-                        text.innerText = "Next Patient";
-                    }
-                }, 1000);
-
-            } catch (err) {
-                console.error("Queue progression failed:", err);
-                Toastify({ text: "Error: " + err.message, style: { background: "#ef4444" } }).showToast();
-            }
-        }
-
-        async function skipPatient() {
-            // Skip logic is essentially the same: find the next one
-            await nextPatient();
-        }
-
-        async function resetQueue() {
-            if (!confirm("Are you sure you want to reset the queue for the start of the day?")) return;
-            const { error } = await supabase.from('clinic_status').update({ current_number: 0 }).eq('doctor_id', 'global');
+        async function saveSettings() {
+            const val = document.getElementById('setting-ticker').value;
+            const { error } = await supabase.from('settings').update({ value: val }).eq('key', 'ticker_text');
             if (!error) {
-                Toastify({ text: "Queue reset to 0.", style: { background: "#6b7280" } }).showToast();
+                Toastify({ text: "Display ticker updated successfully!", style: { background: "#20c997" } }).showToast();
             } else {
-                Toastify({ text: "Reset failed: " + error.message, style: { background: "#ef4444" } }).showToast();
+                alert("Error: " + error.message);
             }
         }
 
@@ -715,14 +590,15 @@
 
         document.getElementById('doctorForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const payload = {
-                name: document.getElementById('docName').value,
-                specialty: document.getElementById('docSpec').value,
-                image_url: document.getElementById('docImg').value,
-                fee: parseFloat(document.getElementById('docFee').value),
-                start_time: document.getElementById('docStartTime').value,
-                slot_duration: parseInt(document.getElementById('docSlotDuration').value)
-            };
+                const payload = {
+                    name: document.getElementById('docName').value,
+                    specialty: document.getElementById('docSpec').value,
+                    image_url: document.getElementById('docImg').value,
+                    fee: parseFloat(document.getElementById('docFee').value),
+                    start_time: document.getElementById('docStartTime').value,
+                    slot_duration: parseInt(document.getElementById('docSlotDuration').value),
+                    consultation_duration_minutes: parseInt(document.getElementById('docConsultMins').value)
+                };
 
             const { data: newDoc, error } = await supabase.from('doctors').insert([payload]).select();
             if (error) { alert('Error adding doctor: ' + error.message); return; }
